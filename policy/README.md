@@ -48,13 +48,13 @@ The `dpa.spec` property defines the storage location properties. The default val
 
 1. Run `oc apply -k ./` to apply all resources at the same time on the hub. 
 
-2. On the cluster you want to backup or restore apps set this label : acm-pv-dr-install="true". 
+2. On the cluster you want to backup or restore apps set this label : `acm-pv-dr-install=true`. 
 This places the `oadp-hdr-app-install` policy on this cluster, and this policy installs velero and configures the connections to the storage.
 
 3. For running a backup or restore operation on the managed cluster:
-  - On the cluster you want to backup the apps set this label : acm-pv-dr="backup". 
+  - On the cluster you want to backup the apps set this label : `acm-pv-dr=backup`. 
 This places the the `oadp-hdr-app-backup` policy on this cluster, which schedules the backups.
-  - On the cluster you want to restore the apps set this label : acm-pv-dr="restore". 
+  - On the cluster you want to restore the apps set this label : `acm-pv-dr=restore`. 
 This places the the `oadp-hdr-app-restore` policy on this cluster, which creates a restore operation.
 
 
@@ -105,6 +105,7 @@ Make sure the `hdr-app-configmap`'s backup schedule resource settings are proper
 This policy is enforced by default.
 
 This policy creates a velero schedule to all managed clusters with a label `acm-pv-dr=backup`.
+
 The schedule is used to backup applications resources and PVs. The name of the schedule is `acm-pv-<pv-storage-region>-<cls-name>`
 The schedule uses the `backup.nsToBackup` `hdr-app-configmap` property to specify the namespaces for the applications to backup. 
 
@@ -114,7 +115,9 @@ The schedule uses the `backup.nsToBackup` `hdr-app-configmap` property to specif
 If the hub manages clusters where stateful applications backups must be restored, then you must install the `oadp-hdr-app-restore` policy.
 
 If the managed cluster (or hub) has the label `acm-pv-dr=restore` then the oadp-hdr-app-restore policy 
-is propagated to this cluster for backup restore operation. This cluster restores applications backup.
+is propagated to this cluster for a restore operation.
+
+This cluster restores applications backup.
 Make sure the `hdr-app-configmap`'s restore resource settings are properly set before applying this policy.
 
 This policy is enforced by default.
