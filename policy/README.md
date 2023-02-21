@@ -159,5 +159,5 @@ Restore step:<br>
 7. On the hub, on the `hdr-app-configmap` resource:
 - set the `restore.nsToRestore: "[\"pacman-ns\"]" `. This will restore all resources from the `pacman-ns`
 - set the `restore.backupName:` and use a backup name created from step 6
-8. Place the retore policy on c2 : create this label on c1 `acm-pv-dr=restore`
+8. Place the restore policy on c2 : create this label on c1 `acm-pv-dr=restore`
 9. You should see the pacman app on c2; launch the pacman app and verify that you see the data saved when running the app on c1.
