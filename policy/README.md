@@ -130,7 +130,27 @@ The restore uses the `nsToRestore` hdr-app-configmap property to specify the nam
 
 
 
+## Testing scenario
+
+Use the pacman app to test the policies. (You can use 2 separate hubs for the sample below, each managing one cluster. Place the pacman app on the hub managing c1)
+
+1. On the hub, have 2 managed clusters c1 and c1.
+2. On the hub, create the pacman application subscription 
+- create an app in the `pacman-ns` namespace, of type git and point to this app https://github.com/tesshuflower/demo/tree/main/pacman
+- place this app on c1
+- play the app, create some users and save the data.
+- verify that you can see the saved data when you launch the pcman again.
+3. On the hub, install the polices above, using the instructions from the readme. 
+4. Place the `oadp-hdr-app-install` policy on c1 and c2 : create this label on both clusters `acm-pv-dr-install="true"`
+
+Backup step:
+5. Place the backup policy on c1 : create this label on c1 `acm-pv-dr=backup`
+6. On the hub, set the `backup.nsToBackup: "[\"pacman-ns\"]" ` on the `hdr-app-configmap` resource. This will backup all resources from the `pacman-ns`
 
 
-
-
+Restore step:
+7. On the hub, on the `hdr-app-configmap` resource:
+- set the `restore.nsToRestore: "[\"pacman-ns\"]" `. This will restore all resources from the `pacman-ns`
+- set the `restore.backupName:` and use a backup name created from step 6
+8. Place the retore policy on c2 : create this label on c1 `acm-pv-dr=restore`
+9. You should see the pacman app on c2; launch the pacman app and verify that you see the data saved when running the app on c1.
