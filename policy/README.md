@@ -144,12 +144,14 @@ Use the pacman app to test the policies. (You can use 2 separate hubs for the sa
 3. On the hub, install the polices above, using the instructions from the readme. 
 4. Place the `oadp-hdr-app-install` policy on c1 and c2 : create this label on both clusters `acm-pv-dr-install="true"`
 
-Backup step:
+Backup step:<br>
+
 5. Place the backup policy on c1 : create this label on c1 `acm-pv-dr=backup`
 6. On the hub, set the `backup.nsToBackup: "[\"pacman-ns\"]" ` on the `hdr-app-configmap` resource. This will backup all resources from the `pacman-ns`
 
 
-Restore step:
+Restore step:<br>
+
 7. On the hub, on the `hdr-app-configmap` resource:
 - set the `restore.nsToRestore: "[\"pacman-ns\"]" `. This will restore all resources from the `pacman-ns`
 - set the `restore.backupName:` and use a backup name created from step 6
