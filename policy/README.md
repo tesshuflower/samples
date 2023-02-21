@@ -37,6 +37,11 @@ The configmap sets configuration options for the backup storage location, for th
 
 Make sure you <b>update all settings with valid values</b> before applying the `hdr-app-configmap` resource on the hub.
 
+<b>Note</b>:
+
+The `dpa.spec` property defines the storage location properties. The default value shows the `dpa.spec` format for using an S3 bucket. Update this to match the type of storage location you want to use.
+
+
 ### Apply policies on the hub
 
 1. Run `oc apply -k ./` to apply all resources at the same time on the hub. 
@@ -115,7 +120,14 @@ This policy is enforced by default.
 This policy creates a velero restore resource to all managed clusters 
 with a label `acm-pv-dr=restore`. The restore resource is used to restore applications resources and PVs
 from a selected backup.
-The restore uses the `nsToRestore` hdr-app-configmap property to specify the namespaces for the applications to restore 
+The restore uses the `nsToRestore` hdr-app-configmap property to specify the namespaces for the applications to restore.
+
+
+<b>Note:</b>
+1. The restore operation doesn't update PV or PVC resources if the restored resource is already on the cluster where the app data is restored. Make sure your application is not installed on that cluster before the restore operation is executed - the PV or PVC available with the restore app should not exist on the restore cluster prior to the restore operation.
+2. The restore cluster must be able to access the region where the restore PV and snapshots are located.
+3. The restore cluster must have a `VolumeSnapshotLocation` velero resource with the same name as the one used by the backup `volumeSnapshotLocations` property. The `VolumeSnapshotLocation` resource from the restore cluster must point to the backed up PV snapshots location, otherwise the restore operation will fail to restore the PV.
+
 
 
 
