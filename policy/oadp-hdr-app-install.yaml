@@ -184,7 +184,7 @@ spec:
                   conditions:
                     - reason: Complete
                       type: Reconciled
-          remediationAction: infrom
+          remediationAction: inform
           severity: high
     - objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
