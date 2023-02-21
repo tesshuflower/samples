@@ -1,5 +1,6 @@
-# app-backup-policies
-Application DR using ACM policies 
+# ACM Persistent data backup and restore
+
+Stateful application DR using ACM policies 
 ------
 
 - [Scenario](#scenario)
@@ -104,7 +105,7 @@ Make sure the `hdr-app-configmap`'s backup schedule resource settings are proper
 This policy is enforced by default.
 
 This policy creates a velero schedule to all managed clusters with a label `acm-pv-dr=backup`.
-The schedule is used to backup applications resources and PVs.
+The schedule is used to backup applications resources and PVs. The name of the schedule is `acm-pv-<pv-storage-region>-<cls-name>`
 The schedule uses the `backup.nsToBackup` `hdr-app-configmap` property to specify the namespaces for the applications to backup. 
 
 
