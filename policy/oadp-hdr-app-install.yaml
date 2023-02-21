@@ -1,0 +1,157 @@
+#
+# This policy deploys velero using the OADP operator to all managed clusters 
+# with a label "acm-pv-dr-install="true".
+#
+# This policy must be installed first; set on the cluster you want to backup or restore apps this label : acm-pv-dr-install="true".
+#
+# Create this policy on the hub managing clusters where you want to create stateful applications backups,
+# or where you restore these backup.  
+# Before installing this policy, create the hdr-app-configmap ConfigMap and set all required properties.
+#
+# Make sure the hdr-app-configmap's storage settings are properly set before applying this policy.
+#
+# IMPORTANT: 
+# If the hub is one of the clusters where this policy will be placed, and the backupNS=open-cluster-management-backup
+# then first enable cluster-backup on MultiClusterHub. 
+# MCH looks for the cluster-backup option and if set to false, it uninstalls OADP from the
+# open-cluster-management-backup and deletes the namespace.
+#
+# Note that it is set to enforce by default.
+#
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: oadp-hdr-app-install
+  namespace: default
+  annotations:
+    policy.open-cluster-management.io/categories: PR.IP Information Protection Processes and Procedures
+    policy.open-cluster-management.io/controls: PR.IP-4 Backups of information are conducted maintained and tested
+    policy.open-cluster-management.io/standards: NIST-CSF
+spec:
+  disabled: false
+  remediationAction: enforce
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-ns-oadp-operators
+        spec:
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: v1
+                kind: Namespace
+                metadata:
+                  name: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+          remediationAction: inform
+          pruneObjectBehavior: DeleteIfCreated
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-oadp-operator-group
+        spec:
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: operators.coreos.com/v1
+                kind: OperatorGroup
+                metadata:
+                  name: redhat-oadp-operator-group
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                spec:
+                  targetNamespaces:
+                    - '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+          remediationAction: enforce
+          pruneObjectBehavior: DeleteIfCreated
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-oadp-operator-subscription
+        spec:
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: operators.coreos.com/v1alpha1
+                kind: Subscription
+                metadata:
+                  name: redhat-oadp-operator-subscription
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                spec:
+                  name: '{{hub fromConfigMap "" "hdr-app-configmap" "subscriptionName" hub}}'
+                  channel: '{{hub fromConfigMap "" "hdr-app-configmap" "channel" hub}}'
+                  installPlanApproval: Automatic
+                  source: redhat-operators
+                  sourceNamespace: openshift-marketplace
+          remediationAction: enforce
+          pruneObjectBehavior: DeleteIfCreated
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-backup-storage-credentials-secret
+        spec:
+          object-templates:
+          - complianceType: musthave
+            objectDefinition:
+              apiVersion: v1
+              data:
+                cloud: '{{hub fromConfigMap "" "hdr-app-configmap" "dpa.aws.backup.cloud.credentials" hub}}'
+              kind: Secret
+              metadata:
+                name: '{{hub fromConfigMap "" "hdr-app-configmap" "dpa.backup.cloud.credentials.name" hub}}'
+                namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+              type: Opaque
+          remediationAction: enforce
+          pruneObjectBehavior: DeleteIfCreated 
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-oadp-dpa-resource
+        spec:
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: oadp.openshift.io/v1alpha1
+                kind: DataProtectionApplication
+                metadata:
+                  name: '{{hub fromConfigMap "" "hdr-app-configmap" "dpaName" hub}}'
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                spec: '{{hub fromConfigMap "" "hdr-app-configmap" "dpa.spec" | toLiteral hub}}'
+          pruneObjectBehavior: DeleteIfCreated                
+          remediationAction: enforce
+          severity: high
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  name: oadp-hdr-app-install-placement
+  namespace: default
+spec:
+  clusterSelector:
+    matchExpressions:
+      - key: acm-pv-dr-install
+        operator: In
+        values:
+          - "true"
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: oadp-hdr-app-install-placement-binding
+  namespace: default
+placementRef:
+  name: oadp-hdr-app-install-placement
+  apiGroup: apps.open-cluster-management.io
+  kind: PlacementRule
+subjects:
+  - name: oadp-hdr-app-install
+    apiGroup: policy.open-cluster-management.io
+    kind: Policy

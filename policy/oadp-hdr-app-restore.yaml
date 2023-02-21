@@ -1,0 +1,103 @@
+#
+# This policy creates a velero restore resource to all managed clusters 
+# with a label "acm-pv-dr=restore". The restore resource is used to restore applications resources and PVs
+# from a selected backup.
+# The restore uses the `restore.nsToRestore` hdr-app-configmap property to specify the namespaces for the applications to restore 
+#
+# Create this policy on the hub managing clusters where you plan to restore a backup created with the oadp-hdr-app-backup policy, 
+# and after you create the oadp-hdr-app-install and oadp-hdr-app-validation policies.
+#
+# Both policies, oadp-hdr-app-backup and oadp-hdr-app-restore can be installed on the same hub,
+# if this hub manages clusters where applications need to be backed up or restored. 
+#
+# Note that a managed cluster can either be a backup target or a restore target, not both at the same time.
+#
+# - If the managed cluster (or hub) has the label "acm-pv-dr=backup" then the oadp-hdr-app-backup policy 
+# is propagated to this cluster for an application backup schedule. This cluster produces applications backups.
+# Make sure the hdr-app-configmap's backup schedule resource settings are properly set before applying this policy.
+#
+# - If the managed cluster (or hub) has the label "acm-pv-dr=restore" then the oadp-hdr-app-restore policy 
+# is propagated to this cluster for backup restore operation. This cluster restores applications backup.
+# Make sure the hdr-app-configmap's restore resource settings are properly set before applying this policy.
+#
+# Note that it is set to enforce by default.
+#
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: oadp-hdr-app-restore
+  namespace: default
+  annotations:
+    policy.open-cluster-management.io/categories: PR.IP Information Protection Processes and Procedures
+    policy.open-cluster-management.io/controls: PR.IP-4 Backups of information are conducted maintained and tested
+    policy.open-cluster-management.io/standards: NIST-CSF
+spec:
+  disabled: false
+  remediationAction: enforce
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-ns-backup
+        spec:
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: v1
+                kind: Namespace
+                metadata:
+                  name: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+          remediationAction: inform
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-restore-resource
+        spec:
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: Restore
+                metadata:
+                  name: 'restore-{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                  labels:
+                    cluster-id: '{{ fromClusterClaim "id.openshift.io" }}'
+                    cluster-name: '{{ fromClusterClaim "name" }}'
+                spec:
+                  existingResourcePolicy: update
+                  includedNamespaces: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.nsToRestore" | toLiteral hub}}'
+                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'
+                  restorePVs: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.restorePVs" | toBool hub}}'            
+          remediationAction: enforce
+          severity: high
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  name: oadp-hdr-app-restore-placement
+  namespace: default
+spec:
+  clusterSelector:
+    matchExpressions:
+      - key: acm-pv-dr
+        operator: In
+        values:
+          - restore
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: oadp-hdr-app-restore-placement-binding
+  namespace: default
+placementRef:
+  name: oadp-hdr-app-restore-placement
+  apiGroup: apps.open-cluster-management.io
+  kind: PlacementRule
+subjects:
+  - name: oadp-hdr-app-restore
+    apiGroup: policy.open-cluster-management.io
+    kind: Policy
