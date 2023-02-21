@@ -11,6 +11,7 @@ Application DR using ACM policies
   - [Install report policy](#install-report-policy)
 - [Backup applications](#backup-applications)
 - [Restore applications](#restore-applications)
+- [Testing Scenario - pacman](#testing-scenario)
 
 ------
 
