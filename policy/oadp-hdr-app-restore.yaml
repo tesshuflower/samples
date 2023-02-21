@@ -33,7 +33,6 @@ metadata:
     policy.open-cluster-management.io/standards: NIST-CSF
 spec:
   disabled: false
-  remediationAction: enforce
   policy-templates:
     - objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
@@ -74,6 +73,74 @@ spec:
                   restorePVs: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.restorePVs" | toBool hub}}'            
           remediationAction: enforce
           severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-restore-failed
+        spec:
+          object-templates:
+            - complianceType: mustnothave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: Restore
+                metadata:
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                status:
+                  phase: Failed                                                            
+          remediationAction: inform
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-restore-failed
+        spec:
+          object-templates:
+            - complianceType: mustnothave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: Restore
+                metadata:
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                status:
+                  phase: PartiallyFailed                                                            
+          remediationAction: inform
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-restore-in-progress
+        spec:
+          object-templates:
+            - complianceType: mustnothave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: Restore
+                metadata:
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                status:
+                  phase: InProgress                                                            
+          remediationAction: inform
+          severity: low
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-restore-no-status
+        spec:
+          object-templates:
+            - complianceType: mustnothave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: Restore
+                metadata:
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                status:
+                  phase: ''                                                            
+          remediationAction: inform
+          severity: low
 ---
 apiVersion: apps.open-cluster-management.io/v1
 kind: PlacementRule

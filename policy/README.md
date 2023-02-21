@@ -9,7 +9,6 @@ Stateful application DR using ACM policies
   - [Setup hdr-app-configmap ConfigMap](#setup-hdr-app-configmap-configmap)
   - [Install policy](#install-policy)
     - [Prereq for placing this policy on the hub](#prereq-for-placing-this-policy-on-the-hub)
-  - [Install report policy](#install-report-policy)
 - [Backup applications](#backup-applications)
 - [Restore applications](#restore-applications)
 - [Testing Scenario - pacman](#testing-scenario)
@@ -82,16 +81,6 @@ If the hub is one of the clusters where this policy will be placed, and the `bac
 
 The MultiClusterHub resource looks for the cluster-backup option and if set to false, it uninstalls OADP from the `open-cluster-management-backup` and deletes the namespace.
 
-
-### Install report policy
-
-Install report policy is `oadp-hdr-app-install-report` 
-
-
-This policy reports on any configuration errors for the application backup or restore scenarios.
-Install this policy on the hub, after you install the oadp-hdr-app-install policy
-
-The policy is set to inform as it only validates the installed configuration.
 
 ## Backup applications
 

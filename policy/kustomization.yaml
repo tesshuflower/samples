@@ -1,6 +1,5 @@
 resources:
 - hdr-app-configmap.yaml
 - oadp-hdr-app-install.yaml
-- oadp-hdr-app-install-report.yaml
 - oadp-hdr-app-backup.yaml
 - oadp-hdr-app-restore.yaml

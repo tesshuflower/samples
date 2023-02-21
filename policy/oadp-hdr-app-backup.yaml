@@ -32,7 +32,6 @@ metadata:
     policy.open-cluster-management.io/standards: NIST SP 800-53
 spec:
   disabled: false
-  remediationAction: enforce
   policy-templates:
     - objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
@@ -77,6 +76,101 @@ spec:
           pruneObjectBehavior: DeleteIfCreated             
           remediationAction: enforce
           severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-backup-error
+        spec:
+          object-templates:
+            - complianceType: mustnothave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: Backup
+                metadata:
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                  labels:
+                    velero.io/schedule-name: acm-pv-{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}-{{ fromClusterClaim "name" }}
+                status:
+                  phase: Error                
+          remediationAction: inform
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-backup-failed-validation
+        spec:
+          object-templates:
+            - complianceType: mustnothave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: Backup
+                metadata:
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                  labels:
+                    velero.io/schedule-name: acm-pv-{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}-{{ fromClusterClaim "name" }}
+                status:
+                  phase: FailedValidation                
+          remediationAction: inform
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-backup-partially-failed
+        spec:
+          object-templates:
+            - complianceType: mustnothave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: Backup
+                metadata:
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                  labels:
+                    velero.io/schedule-name: acm-pv-{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}-{{ fromClusterClaim "name" }}
+                status:
+                  phase: PartiallyFailed                
+          remediationAction: inform
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-backup-in-progress
+        spec:
+          object-templates:
+            - complianceType: mustnothave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: Backup
+                metadata:
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                labels:
+                  velero.io/schedule-name: acm-pv-{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}-{{ fromClusterClaim "name" }}
+                status:
+                  phase: InProgress                
+          remediationAction: inform
+          severity: low
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-backup-no-status
+        spec:
+          object-templates:
+            - complianceType: mustnothave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: Backup
+                metadata:
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                labels:
+                  velero.io/schedule-name: acm-pv-{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}-{{ fromClusterClaim "name" }}
+                status:
+                  phase: ''                                                            
+          remediationAction: inform
+          severity: low
 ---
 apiVersion: apps.open-cluster-management.io/v1
 kind: PlacementRule

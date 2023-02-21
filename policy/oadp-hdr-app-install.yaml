@@ -30,7 +30,6 @@ metadata:
     policy.open-cluster-management.io/standards: NIST-CSF
 spec:
   disabled: false
-  remediationAction: enforce
   policy-templates:
     - objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
@@ -45,7 +44,7 @@ spec:
                 kind: Namespace
                 metadata:
                   name: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
-          remediationAction: inform
+          remediationAction: enforce
           pruneObjectBehavior: DeleteIfCreated
           severity: high
     - objectDefinition:
@@ -128,6 +127,82 @@ spec:
                 spec: '{{hub fromConfigMap "" "hdr-app-configmap" "dpa.spec" | toLiteral hub}}'
           pruneObjectBehavior: DeleteIfCreated                
           remediationAction: enforce
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-app-oadp-pod-running
+        spec:
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: v1
+                kind: Pod
+                metadata:
+                  annotations:
+                    repository: https://github.com/openshift/oadp-operator
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                status:
+                  phase: Running
+          remediationAction: inform
+          severity: high 
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-app-velero-pod-running
+        spec:
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: v1
+                kind: Pod
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: velero
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                status:
+                  phase: Running
+          remediationAction: inform
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-app-dpa-complete
+        spec:
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: oadp.openshift.io/v1alpha1
+                kind: DataProtectionApplication
+                metadata:
+                  name: '{{hub fromConfigMap "" "hdr-app-configmap" "dpaName" hub}}'
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                status:
+                  conditions:
+                    - reason: Complete
+                      type: Reconciled
+          remediationAction: infrom
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-backup-storage-location-available
+        spec:
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: BackupStorageLocation
+                metadata:
+                  name: '{{hub fromConfigMap "" "hdr-app-configmap" "dpaName" hub}}-1'
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                status:
+                  phase: Available                
+          remediationAction: inform
           severity: high
 ---
 apiVersion: apps.open-cluster-management.io/v1
