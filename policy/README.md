@@ -70,7 +70,7 @@ Make sure the `hdr-app-configmap`'s storage settings are properly set before app
 
 The  `oadp-hdr-app-install` installs velero and configures the connection to the storage.
 
-The  `oadp-hdr-app-install-report` reports on any runtime or configuration error.
+The  `oadp-hdr-app-install` informs on any runtime or configuration error.
 
 #### Prereq for placing this policy on the hub
 
@@ -88,10 +88,13 @@ If the hub manages clusters where stateful applications are running, and you wan
 
 
 If the managed cluster (or hub) has the label `acm-pv-dr=backup` then the oadp-hdr-app-backup policy 
-is propagated to this cluster for an application backup schedule. This cluster produces applications backups.
+is propagated to this cluster for an application backup schedule and the cluster produces application backups.
+
 Make sure the `hdr-app-configmap`'s backup schedule resource settings are properly set before applying this policy.
 
 This policy is enforced by default.
+
+The  policy also informs on any backup configuration error.
 
 This policy creates a velero schedule to all managed clusters with a label `acm-pv-dr=backup`.
 
@@ -107,9 +110,12 @@ If the managed cluster (or hub) has the label `acm-pv-dr=restore` then the oadp-
 is propagated to this cluster for a restore operation.
 
 This cluster restores applications backup.
+
 Make sure the `hdr-app-configmap`'s restore resource settings are properly set before applying this policy.
 
 This policy is enforced by default.
+
+The  policy also informs on any restore configuration error.
 
 This policy creates a velero restore resource to all managed clusters 
 with a label `acm-pv-dr=restore`. The restore resource is used to restore applications resources and PVs
