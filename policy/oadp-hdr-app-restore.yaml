@@ -126,8 +126,6 @@ spec:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
                   backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
-                spec:
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
                 status:
                   phase: FailedValidation                                                            
           remediationAction: inform
