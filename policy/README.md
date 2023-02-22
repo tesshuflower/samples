@@ -12,6 +12,7 @@ Stateful application DR using ACM policies
 - [Backup applications](#backup-applications)
 - [Restore applications](#restore-applications)
 - [Testing Scenario - pacman](#testing-scenario)
+- [Issues and limitations](#issues-and-limitations)
 
 ------
 
@@ -156,3 +157,12 @@ Restore step:<br>
 - set the `restore.backupName:` and use a backup name created from step 6
 8. Place the restore policy on c2 : create this label on c2 `acm-pv-dr=restore`
 9. You should see the pacman app on c2; launch the pacman app and verify that you see the data saved when running the app on c1.
+
+# Issues and limitations
+
+1. Policy template adds new data if the CRD allows: Updating the config map and reapplying it on hub could end up in duplicating resource properties. For example, if I want to update the `snapshotLocations` location property to `us-est-1`, after I update the config map I end up with a DataProtectionApplication object containing two `snapshotLocations`, one for the old value and another for the new one.  The fix would be to :
+-  delete the policy and reapply - but this removes all the resources created by the policy, so a bit too aggressive.
+- manually remove the old property - hard to do and error prone if the resource was placed on a lot of clusters
+2. PVStorage for backup must be set to be the location of the PVs to be backed up. 
+- you cannot backup PVs from different regions/locations in the same backup, since a backup points to only one PVStorage
+- you cannot restore a PV unless the restore resource points to the same PVStorage as the backup; so the restore cluster must have access to the PV snapshot storage location.
