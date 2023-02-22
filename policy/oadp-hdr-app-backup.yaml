@@ -80,6 +80,27 @@ spec:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
         metadata:
+          name: check-backup-completed
+        spec:
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: Backup
+                metadata:
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                  labels:
+                    velero.io/schedule-name: acm-pv-{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}-{{ fromClusterClaim "name" }}
+                    cluster-id: '{{ fromClusterClaim "id.openshift.io" }}'
+                    cluster-name: '{{ fromClusterClaim "name" }}'              
+                status:
+                  phase: Completed              
+          remediationAction: inform
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
           name: check-backup-error
         spec:
           object-templates:
@@ -91,6 +112,8 @@ spec:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                   labels:
                     velero.io/schedule-name: acm-pv-{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}-{{ fromClusterClaim "name" }}
+                    cluster-id: '{{ fromClusterClaim "id.openshift.io" }}'
+                    cluster-name: '{{ fromClusterClaim "name" }}'              
                 status:
                   phase: Error                
           remediationAction: inform
@@ -110,6 +133,8 @@ spec:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                   labels:
                     velero.io/schedule-name: acm-pv-{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}-{{ fromClusterClaim "name" }}
+                    cluster-id: '{{ fromClusterClaim "id.openshift.io" }}'
+                    cluster-name: '{{ fromClusterClaim "name" }}'              
                 status:
                   phase: FailedValidation                
           remediationAction: inform
@@ -129,6 +154,8 @@ spec:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                   labels:
                     velero.io/schedule-name: acm-pv-{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}-{{ fromClusterClaim "name" }}
+                    cluster-id: '{{ fromClusterClaim "id.openshift.io" }}'
+                    cluster-name: '{{ fromClusterClaim "name" }}'              
                 status:
                   phase: PartiallyFailed                
           remediationAction: inform
@@ -146,8 +173,10 @@ spec:
                 kind: Backup
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
-                labels:
-                  velero.io/schedule-name: acm-pv-{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}-{{ fromClusterClaim "name" }}
+                  labels:
+                    velero.io/schedule-name: acm-pv-{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}-{{ fromClusterClaim "name" }}
+                    cluster-id: '{{ fromClusterClaim "id.openshift.io" }}'
+                    cluster-name: '{{ fromClusterClaim "name" }}'              
                 status:
                   phase: InProgress                
           remediationAction: inform
@@ -165,8 +194,10 @@ spec:
                 kind: Backup
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
-                labels:
-                  velero.io/schedule-name: acm-pv-{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}-{{ fromClusterClaim "name" }}
+                  labels:
+                    velero.io/schedule-name: acm-pv-{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}-{{ fromClusterClaim "name" }}
+                    cluster-id: '{{ fromClusterClaim "id.openshift.io" }}'
+                    cluster-name: '{{ fromClusterClaim "name" }}'              
                 status:
                   phase: ''                                                            
           remediationAction: inform
