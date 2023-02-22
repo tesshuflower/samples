@@ -161,8 +161,8 @@ Restore step:<br>
 # Issues and limitations
 
 1. Policy template adds new data if the CRD allows: Updating the config map and reapplying it on hub could end up in duplicating resource properties. For example, if I want to update the `snapshotLocations` location property to `us-est-1`, after I update the config map I end up with a DataProtectionApplication object containing two `snapshotLocations`, one for the old value and another for the new one.  The fix would be to :
--  delete the policy and reapply - but this removes all the resources created by the policy, so a bit too aggressive.
-- manually remove the old property - hard to do and error prone if the resource was placed on a lot of clusters
-2. PVStorage for backup must be set to be the location of the PVs to be backed up. 
-- you cannot backup PVs from different regions/locations in the same backup, since a backup points to only one PVStorage
-- you cannot restore a PV unless the restore resource points to the same PVStorage as the backup; so the restore cluster must have access to the PV snapshot storage location.
+  -  delete the policy and reapply - but this removes all the resources created by the policy, so a bit too aggressive.
+  - manually remove the old property - hard to do and error prone if the resource was placed on a lot of clusters
+2. PVStorage for the backup resource must match the location of the PVs to be backed up. 
+  - you cannot backup PVs from different regions/locations in the same backup, since a backup points to only one PVStorage
+3. You cannot restore a PV unless the restore resource points to the same PVStorage as the backup; so the restore cluster must have access to the PV snapshot storage location.
