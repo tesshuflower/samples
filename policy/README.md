@@ -166,3 +166,4 @@ Restore step:<br>
 2. PVStorage for the backup resource must match the location of the PVs to be backed up. 
   - you cannot backup PVs from different regions/locations in the same backup, since a backup points to only one PVStorage
 3. You cannot restore a PV unless the restore resource points to the same PVStorage as the backup; so the restore cluster must have access to the PV snapshot storage location.
+4. PV backup is storage/platform specific; you need the same storage class usage on both source ( where you backup the PV and take the snapshots) and on target cluster ( where you restore the PV snapshot )
