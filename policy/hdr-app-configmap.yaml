@@ -109,7 +109,14 @@ data:
   backup.schedule: 0 */1 * * *
   backup.ttl: 240h0m0s
 
+  ## for restic use these values ##
+  #backup.snapshotVolumes: "false"
+  #backup.defaultVolumesToRestic: "true"
+  ####
+
+  # if not using restic, keep the defaults below
   backup.snapshotVolumes: "true"
+  backup.defaultVolumesToRestic: "false"
 
   # change this to dpa-2 if you want to use a snapshot location other than the one matching the cluster node region
   # dpa-1 matches the  cluster nodes region
