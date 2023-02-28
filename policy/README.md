@@ -10,8 +10,11 @@ Stateful application DR using ACM policies
   - [Install policy](#install-policy)
     - [Prereq for placing this policy on the hub](#prereq-for-placing-this-policy-on-the-hub)
 - [Backup applications](#backup-applications)
+  - [Backup pre and post hooks](#backup-pre-and-post-hooks)
 - [Restore applications](#restore-applications)
+  - [Restore pre and post hooks](#restore-pre-and-post-hooks)
 - [Testing Scenario - pacman](#testing-scenario)
+- [Example of pre and post backup hooks](#example-of-pre-and-post-backup-hooks)
 - [Issues and limitations](#issues-and-limitations)
 
 ------
@@ -102,6 +105,13 @@ This policy creates a velero schedule to all managed clusters with a label `acm-
 The schedule is used to backup applications resources and PVs. The name of the schedule is `acm-pv-<pv-storage-region>-<cls-name>`
 The schedule uses the `backup.nsToBackup` `hdr-app-configmap` property to specify the namespaces for the applications to backup. 
 
+### Backup pre and post hooks 
+
+If you want to prepare the application before running the backup, you can use the following annotations on a pod to make Velero [execute a backup hook](#https://velero.io/docs/v1.9/backup-hooks/) when backing up the pod:
+
+`pre.hook.backup.velero.io/container`
+`pre.hook.backup.velero.io/command`
+
 
 ## Restore applications
 
@@ -122,6 +132,18 @@ This policy creates a velero restore resource to all managed clusters
 with a label `acm-pv-dr=restore`. The restore resource is used to restore applications resources and PVs
 from a selected backup.
 The restore uses the `nsToRestore` hdr-app-configmap property to specify the namespaces for the applications to restore.
+
+### Restore pre and post hooks 
+
+If you want to run some commands pre and post restore, you can use the following annotations on a pod to make Velero [execute a restore hook](#https://velero.io/docs/v1.9/restore-hooks/) when restoring the pod:
+
+
+`init.hook.restore.velero.io/container-image`
+The container image for the init container to be added.
+`init.hook.restore.velero.io/container-name`
+The name for the init container that is being added.
+`init.hook.restore.velero.io/command`
+This is the ENTRYPOINT for the init container being added. This command is not executed within a shell and the container image’s ENTRYPOINT is used if this is not provided.
 
 
 <b>Note:</b>
@@ -157,6 +179,46 @@ Restore step:<br>
 - set the `restore.backupName:` and use a backup name created from step 6
 8. Place the restore policy on c2 : create this label on c2 `acm-pv-dr=restore`
 9. You should see the pacman app on c2; launch the pacman app and verify that you see the data saved when running the app on c1.
+
+
+# Example of pre and post backup hooks:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    name: mongo
+  name: mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: mongo
+  template:
+    metadata:
+      labels:
+        name: mongo
+      annotations:
+        pre.hook.backup.velero.io/container: mongo
+        pre.hook.backup.velero.io/command: '["/sbin/fsfreeze", "--freeze", "/bitnami/mongodb/data/db"]'
+        post.hook.backup.velero.io/container: mongo
+        post.hook.backup.velero.io/command: '["/sbin/fsfreeze", "--unfreeze", "/bitnami/mongodb/data/db"]'
+    spec:
+      containers:
+      - image: bitnami/mongodb:5.0.14
+        name: mongo
+        ports:
+        - name: mongo
+          containerPort: 27017
+        volumeMounts:
+          - name: mongo-db
+            mountPath: /bitnami/mongodb/data/db
+      volumes:
+        - name: mongo-db
+          persistentVolumeClaim:
+            claimName: mongo-storage
+```
 
 # Issues and limitations
 
