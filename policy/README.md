@@ -107,7 +107,7 @@ The schedule uses the `backup.nsToBackup` `hdr-app-configmap` property to specif
 
 ### Backup pre and post hooks 
 
-If you want to prepare the application before running the backup, you can use the following annotations on a pod to make Velero [execute a backup hook](#https://velero.io/docs/v1.9/backup-hooks/) when backing up the pod:
+If you want to prepare the application before running the backup, you can use the following annotations on a pod to make [Velero execute a backup hook](https://velero.io/docs/v1.9/backup-hooks/) when backing up the pod:
 
 `pre.hook.backup.velero.io/container`
 `pre.hook.backup.velero.io/command`
@@ -135,7 +135,7 @@ The restore uses the `nsToRestore` hdr-app-configmap property to specify the nam
 
 ### Restore pre and post hooks 
 
-If you want to run some commands pre and post restore, you can use the following annotations on a pod to make Velero [execute a restore hook](#https://velero.io/docs/v1.9/restore-hooks/) when restoring the pod:
+If you want to run some commands pre and post restore, you can use the following annotations on a pod to make [Velero execute a restore hook](https://velero.io/docs/v1.9/restore-hooks/) when restoring the pod:
 
 
 `init.hook.restore.velero.io/container-image`
