@@ -70,7 +70,7 @@ spec:
                   template:
                     volumeSnapshotLocations:
                       - '{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}' 
-                    snapshotVolumes: true
+                    snapshotVolumes: '{{hub fromConfigMap "" "hdr-app-configmap" "backup.snapshotVolumes" | toBool hub}}'
                     includedNamespaces: '{{hub fromConfigMap "" "hdr-app-configmap" "backup.nsToBackup" | toLiteral hub}}' 
                     ttl: '{{hub fromConfigMap "" "hdr-app-configmap" "backup.ttl" hub}}'  
           pruneObjectBehavior: DeleteIfCreated             

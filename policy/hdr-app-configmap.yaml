@@ -109,6 +109,8 @@ data:
   backup.schedule: 0 */1 * * *
   backup.ttl: 240h0m0s
 
+  backup.snapshotVolumes: "true"
+
   # change this to dpa-2 if you want to use a snapshot location other than the one matching the cluster node region
   # dpa-1 matches the  cluster nodes region
   backup.volumeSnapshotLocation: dpa-1
