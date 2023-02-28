@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    name: mongo
+  name: mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: mongo
+  template:
+    metadata:
+      labels:
+        name: mongo
+      annotations:
+        pre.hook.backup.velero.io/container: mongo
+        pre.hook.backup.velero.io/command: '["/bin/bash", "-c", "echo quiesce > /tmp/quiesce.txt"]'
+        post.hook.backup.velero.io/container: mongo
+        post.hook.backup.velero.io/command: '["/bin/bash", "-c", "echo after_backup > /tmp/after_backup.txt"]'
+        pre.hook.backup.velero.io/container: mongo
+        pre.hook.backup.velero.io/command: '["/sbin/fsfreeze", "--freeze", "/bitnami/mongodb/data/db"]'
+        post.hook.backup.velero.io/container: mongo
+        post.hook.backup.velero.io/command: '["/sbin/fsfreeze", "--unfreeze", "/bitnami/mongodb/data/db"]'
+    spec:
+      containers:
+      - image: bitnami/mongodb:5.0.14
+        name: mongo
+        ports:
+        - name: mongo
+          containerPort: 27017
+        volumeMounts:
+          - name: mongo-db
+            mountPath: /bitnami/mongodb/data/db
+      volumes:
+        - name: mongo-db
+          persistentVolumeClaim:
+            claimName: mongo-storage
