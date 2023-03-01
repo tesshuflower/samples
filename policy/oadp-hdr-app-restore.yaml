@@ -32,23 +32,13 @@ metadata:
     policy.open-cluster-management.io/controls: PR.IP-4 Backups of information are conducted maintained and tested
     policy.open-cluster-management.io/standards: NIST-CSF
 spec:
+  dependencies:
+  - apiVersion: policy.open-cluster-management.io/v1
+    compliance: Compliant
+    kind: Policy
+    name: oadp-hdr-app-install
   disabled: false
   policy-templates:
-    - objectDefinition:
-        apiVersion: policy.open-cluster-management.io/v1
-        kind: ConfigurationPolicy
-        metadata:
-          name: check-ns-backup
-        spec:
-          object-templates:
-            - complianceType: musthave
-              objectDefinition:
-                apiVersion: v1
-                kind: Namespace
-                metadata:
-                  name: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
-          remediationAction: inform
-          severity: high
     - objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy

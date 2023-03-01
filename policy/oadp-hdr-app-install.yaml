@@ -213,10 +213,8 @@ metadata:
 spec:
   clusterSelector:
     matchExpressions:
-      - key: acm-pv-dr-install
-        operator: In
-        values:
-          - "true"
+      - key: acm-pv-dr
+        operator: Exists
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
