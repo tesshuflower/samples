@@ -42,6 +42,26 @@ spec:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
         metadata:
+          name: check-storage-class-map
+        spec:
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: v1
+                kind: ConfigMap
+                metadata:
+                  name: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.storage.config.name" hub}}'
+                  namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
+                  labels:
+                    velero.io/plugin-config: ""
+                    velero.io/change-storage-class: RestoreItemAction
+                data: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.storage.config.mappings" | toLiteral hub}}'
+          remediationAction: enforce
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
           name: check-restore-resource
         spec:
           object-templates:

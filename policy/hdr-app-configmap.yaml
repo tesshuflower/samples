@@ -138,6 +138,18 @@ data:
 ######################################
 ###### end backup schedule resource ###
 
+## restore storage class mapping ##
+# Velero can change the storage class of persistent volumes and persistent volume claims 
+# during restores. To configure a storage class mapping, 
+# create this config map in the Velero namespace, on the restore cluster
+  restore.storage.config.name: storage-class-acm-app
+  restore.storage.config.mappings: "{
+          \"managed-csi\": \"thin\",
+    }"
+##################################
+
+
+
 
 
 
