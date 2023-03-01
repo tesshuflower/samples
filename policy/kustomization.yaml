@@ -1,5 +1,5 @@
 resources:
-- hdr-app-configmap.yaml
+- ./input/restic/hdr-app-configmap.yaml # optionally, use input/pv-snap 
 - acm-app-backup-policy-set.yaml
 - acm-app-restore-policy-set.yaml
 - oadp-hdr-app-install.yaml

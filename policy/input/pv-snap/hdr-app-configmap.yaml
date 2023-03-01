@@ -2,6 +2,10 @@
 # This configmap is used by the oadp-hdr-app-install and oadp-hdr-app-backup policies 
 # and specifies the configuration required to install velero and create backups 
 #
+# This config is set to use snapshotVolumes for backing up PVs; this option works only if 
+# your backup and restore clusters use the same StorageClass 
+# and the restore cluster can access the region/location where the volume snapshot are stored
+# 
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -105,30 +109,40 @@ data:
 
 ###### backup schedule resource ###
 ####################################
-  backup.schedule: 0 */1 * * *
-  backup.ttl: 240h0m0s
-
-  ## for restic use these values ##
-  #backup.snapshotVolumes: "false"
-  #backup.defaultVolumesToRestic: "true"
-  ####
-
-  # if not using restic, keep the defaults below
   backup.snapshotVolumes: "true"
   backup.defaultVolumesToRestic: "false"
-
-  # change this to dpa-2 if you want to use a snapshot location other than the one matching the cluster node region
-  # dpa-1 matches the  cluster nodes region
-  backup.volumeSnapshotLocation: dpa-1
-  # list here all applications namespaces you want to backup
-  # for example backup.nsToBackup: "[\"pacman-ns\", \"helloworld-pv-ns\"]"
-  backup.nsToBackup: "[\"app1-ns\", \"app2-ns\", \"app3-ns\"]" 
 ######################################
 ###### end backup schedule resource ###
 
 ###### restore resource ###
 ####################################
   restore.restorePVs: "true"
+######################################
+###### end backup schedule resource ###
+
+
+###### backup schedule resource ###
+####################################
+  backup.schedule: 0 */1 * * *
+  backup.ttl: 240h0m0s
+
+  # list here all applications namespaces you want to backup
+  # for example backup.nsToBackup: "[\"pacman-ns\", \"helloworld-pv-ns\"]"
+  backup.nsToBackup: "[\"app1-ns\", \"app2-ns\", \"app3-ns\"]" 
+######################################
+###### end backup schedule resource ###
+
+## restore storage class mapping ##
+  restore.storage.config.name: storage-class-acm-app
+  restore.mappings: "{
+      \"data\": {
+          \"managed-csi\": \"thin\",
+      },
+    }"
+##################################
+
+###### restore resource ###
+####################################
   # the name of the backup to restore from
   # for example backupName: acm-pv-schedule-vb-managed-cls-1-20230208150010
   restore.backupName: <backup-name>
@@ -137,20 +151,4 @@ data:
   restore.nsToRestore: "[\"app1-ns\", \"app2-ns\"]"
 ######################################
 ###### end backup schedule resource ###
-
-## restore storage class mapping ##
-# Velero can change the storage class of persistent volumes and persistent volume claims 
-# during restores. To configure a storage class mapping, 
-# create this config map in the Velero namespace, on the restore cluster
-  restore.storage.config.name: storage-class-acm-app
-  restore.storage.config.mappings: "{
-          \"managed-csi\": \"thin\",
-    }"
-##################################
-
-
-
-
-
-
 
