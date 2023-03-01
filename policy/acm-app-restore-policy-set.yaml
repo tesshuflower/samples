@@ -1,0 +1,35 @@
+apiVersion: policy.open-cluster-management.io/v1beta1
+kind: PolicySet
+metadata:
+  name: acm-app-restore
+spec:
+  description: restore support for stateful apps running on managed clusters
+  policies:
+    - oadp-hdr-app-install
+    - oadp-hdr-app-restore
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  name: acm-app-restore-placement
+spec:
+  clusterConditions: []
+  clusterSelector:
+    matchExpressions:
+      - key: acm-pv-dr
+        operator: In
+        values:
+          - restore
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: acm-app-restore-placement-binding
+placementRef:
+  name: acm-app-restore-placement
+  apiGroup: apps.open-cluster-management.io
+  kind: PlacementRule
+subjects:
+  - name: acm-app-restore
+    apiGroup: policy.open-cluster-management.io
+    kind: PolicySet

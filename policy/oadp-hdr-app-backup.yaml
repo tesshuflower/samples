@@ -25,7 +25,6 @@ apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
 metadata:
   name: oadp-hdr-app-backup
-  namespace: default
   annotations:
     policy.open-cluster-management.io/categories: CA Security Assessment and Authorization
     policy.open-cluster-management.io/controls: CA-2 Security Assessments, CA-7 Continuous Monitoring
@@ -193,30 +192,3 @@ spec:
                   phase: ''                                                            
           remediationAction: inform
           severity: low
----
-apiVersion: apps.open-cluster-management.io/v1
-kind: PlacementRule
-metadata:
-  name: oadp-hdr-app-backup-placement
-  namespace: default
-spec:
-  clusterSelector:
-    matchExpressions:
-      - key: acm-pv-dr
-        operator: In
-        values:
-          - backup
----
-apiVersion: policy.open-cluster-management.io/v1
-kind: PlacementBinding
-metadata:
-  name: oadp-hdr-app-backup-placement-binding
-  namespace: default
-placementRef:
-  name: oadp-hdr-app-backup-placement
-  apiGroup: apps.open-cluster-management.io
-  kind: PlacementRule
-subjects:
-  - name: oadp-hdr-app-backup
-    apiGroup: policy.open-cluster-management.io
-    kind: Policy
