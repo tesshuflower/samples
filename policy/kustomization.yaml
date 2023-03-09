@@ -1,7 +1,10 @@
 resources:
-- ./input/restic/hdr-app-configmap.yaml # use ./input/pv-snap if you want to use volume snapshots instead  
+# use ./input/pv-snap/hdr-app-configmap.yaml if you want to use volume snapshots instead 
+- ./input/restic/hdr-app-configmap.yaml 
+# install the backup or restore policyset, or both ( comment out the policyset not needed on this hub ) 
 - ./policy-sets/acm-app-backup-policy-set.yaml
 - ./policy-sets/acm-app-restore-policy-set.yaml
 - ./policies/oadp-hdr-app-install.yaml
+# install the backup or restore policy, or both ( comment out the policy not needed on this hub ) 
 - ./policies/oadp-hdr-app-backup.yaml
 - ./policies/oadp-hdr-app-restore.yaml

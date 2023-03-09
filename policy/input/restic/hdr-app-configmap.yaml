@@ -87,6 +87,8 @@ data:
 }"
 ## END DPA ##
 
+   # the name prefix for the resource to backup
+  backup.prefix: acm-restic
 
 
 ###### backup schedule resource ###

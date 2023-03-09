@@ -105,7 +105,8 @@ data:
 }"
 ## END DPA ##
 
-
+   # the name prefix for the resource to backup
+  backup.prefix: acm-app
 
 ###### backup schedule resource ###
 ####################################
