@@ -16,7 +16,7 @@ Stateful application DR using ACM policies
   - [Restore pre and post hooks](#restore-pre-and-post-hooks)
 - [Testing Scenario - pacman](#testing-scenario)
 - [Example of pre and post backup hooks](#example-of-pre-and-post-backup-hooks)
-- [Issues and limitations](#issues-and-limitations)
+- [Usage considerations](#usage-considerations)
 
 ------
 
@@ -54,7 +54,21 @@ Make sure you <b>update all settings with valid values</b> before applying the `
 
 <b>Note</b>:
 
-The `dpa.spec` property defines the storage location properties. The default value shows the `dpa.spec` format for using an S3 bucket. Update this to match the type of storage location you want to use.
+- The `dpa.spec` property defines the storage location properties. The default value shows the `dpa.spec` format for using an S3 bucket. Update this to match the type of storage location you want to use.
+- You can still upate the `hdr-app-configmap` properties after the `ConfigMap` was applied to the hub. When you do that, the backup settings on the managed clusters where the PolicySet has been applied will be automatically updated with the new values for the `hdr-app-configmap`.  For example, to restore a new backup, update the `restore.backupName` property on the `hdr-app-configmap` on the hub; the change is pushed to the deployed policies on the managed cluster and a restore resource matching the new properties will be created there.
+- To create multiple backup configurations you want to deploy the `PolicySet` on separate namespaces on the hub. For example, if you want to have a backup for `pacman` on `cluster1` and a backup for `pacman` and `busybox` on `cluster2`, you can create a namespace for the two options and apply the `ConfigMap` and policies in both ( before applying the `ConfigMap` on each namespace, it should be updated to match the options for that deployment ):
+
+```
+oc create ns pacman-policy
+oc project pacman-policy
+oc apply -k ./policy
+```
+
+```
+oc create ns pac-bbox-policy
+oc project pac-bbox-policy
+oc apply -k ./policy
+```
 
 ### Prereq for placing this policies on the hub
 
@@ -271,13 +285,17 @@ spec:
             claimName: mongo-storage
 ```
 
-# Issues and limitations
+# Usage considerations
 
-1. Policy template adds new data if the CRD allows: Updating the config map and reapplying it on hub could end up in duplicating resource properties. For example, if I want to update the `snapshotLocations` location property to `us-est-1`, after I update the config map I end up with a DataProtectionApplication object containing two `snapshotLocations`, one for the old value and another for the new one.  The fix would be to :
-  -  delete the policy and reapply - but this removes all the resources created by the policy, so a bit too aggressive.
-  - manually remove the old property - hard to do and error prone if the resource was placed on a lot of clusters
-2. PV backup ( versus Restic )
-- PVStorage for the backup resource must match the location of the PVs to be backed up. 
-  - you cannot backup PVs from different regions/locations in the same backup, since a backup points to only one PVStorage
- -  You cannot restore a PV unless the restore resource points to the same PVStorage as the backup; so the restore cluster must have access to the PV snapshot storage location.
- - PV backup is storage/platform specific; you need the same storage class usage on both source ( where you backup the PV and take the snapshots) and on target cluster ( where you restore the PV snapshot )
+1. When restoring a backup make sure the restore cluster doesn't already contain PVs and PVClaims with the same name as the ones restored with the backup. The PV and PVClaims will not be updated if they already exist on the restore cluster. 
+2. Using restic for backing up PVs (use the configmap from the `./policy/input/restic` folder)
+    - Use this option if the PV snapshot is not supported your backup and restore clusters are running on different platforms or they are in different regions and can't share PV snapshots, otherwise you can use the PV Snapshot approach.
+    - See restic limitations here https://velero.io/docs/v1.9/restic/#limitations 
+3. Uing PV Snapshot backup (use the configmap from the  `./policy/input/pv-snap` folder)
+    - PVStorage for the backup resource must match the location of the PVs to be backed up. 
+    - You cannot backup PVs from different regions/locations in the same backup, since a backup points to only one PVStorage
+    -  You cannot restore a PV unless the restore resource points to the same PVStorage as the backup; so the restore cluster must have access to the PV snapshot storage location.
+    - PV backup is storage/platform specific; you need the same storage class usage on both source ( where you backup the PV and take the snapshots) and on target cluster ( where you restore the PV snapshot )
+4. Policy template adds new data if the CRD allows: Updating the config map and reapplying it on hub could end up in duplicating resource properties. For example, if I want to update the `snapshotLocations` location property to `us-est-1`, after I update the config map I end up with a DataProtectionApplication object containing two `snapshotLocations`, one for the old value and another for the new one.  The fix would be to :
+    -  delete the policy and reapply - but this removes all the resources created by the policy, so a bit too aggressive.
+    - manually remove the old property - hard to do and error prone if the resource was placed on a lot of clusters
