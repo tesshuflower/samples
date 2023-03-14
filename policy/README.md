@@ -225,7 +225,7 @@ This is the ENTRYPOINT for the init container being added. This command is not e
         - or your backup and restore clusters are running on different platforms 
         - or they are in different regions and can't share PV snapshots, 
     - See restic limitations here https://velero.io/docs/v1.9/restic/#limitations 
-3. Uing PV Snapshot backup (use the configmap from the  `./policy/input/pv-snap` folder)
+3. Using PV Snapshot backup (use the configmap from the  `./policy/input/pv-snap` folder)
     - PVStorage for the backup resource must match the location of the PVs to be backed up. 
     - You cannot backup PVs from different regions/locations in the same backup, since a backup points to only one PVStorage
     -  You cannot restore a PV unless the restore resource points to the same PVStorage as the backup; so the restore cluster must have access to the PV snapshot storage location.
