@@ -220,7 +220,10 @@ This is the ENTRYPOINT for the init container being added. This command is not e
 
 1. When restoring a backup make sure the restore cluster doesn't already contain PVs and PVClaims with the same name as the ones restored with the backup. The PV and PVClaims will not be updated if they already exist on the restore cluster. 
 2. Using restic for backing up PVs (use the configmap from the `./policy/input/restic` folder)
-    - Use this option if the PV snapshot is not supported your backup and restore clusters are running on different platforms or they are in different regions and can't share PV snapshots, otherwise you can use the PV Snapshot approach.
+    - Use this option if 
+        - the PV snapshot is not supported
+        - or your backup and restore clusters are running on different platforms 
+        - or they are in different regions and can't share PV snapshots, 
     - See restic limitations here https://velero.io/docs/v1.9/restic/#limitations 
 3. Uing PV Snapshot backup (use the configmap from the  `./policy/input/pv-snap` folder)
     - PVStorage for the backup resource must match the location of the PVs to be backed up. 
