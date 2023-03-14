@@ -10,6 +10,7 @@ Stateful application DR using ACM policies
     - [Restore PolicySet](#restore-policyset)
   - [Setup hdr-app-configmap ConfigMap](#setup-hdr-app-configmap-configmap)
   - [Install policy](#install-policy)
+- [Create multiple backup configurations](#create-multiple-backup-configurations)
 - [Backup applications](#backup-applications)
   - [Backup pre and post hooks](#backup-pre-and-post-hooks)
 - [Restore applications](#restore-applications)
@@ -56,7 +57,10 @@ Make sure you <b>update all settings with valid values</b> before applying the `
 
 - The `dpa.spec` property defines the storage location properties. The default value shows the `dpa.spec` format for using an S3 bucket. Update this to match the type of storage location you want to use.
 - You can still upate the `hdr-app-configmap` properties after the `ConfigMap` was applied to the hub. When you do that, the backup settings on the managed clusters where the PolicySet has been applied will be automatically updated with the new values for the `hdr-app-configmap`.  For example, to restore a new backup, update the `restore.backupName` property on the `hdr-app-configmap` on the hub; the change is pushed to the deployed policies on the managed cluster and a restore resource matching the new properties will be created there.
-- To create multiple backup configurations you want to deploy the `PolicySet` on separate namespaces on the hub. For example, if you want to have a backup for `pacman` on `cluster1` and a backup for `pacman` and `busybox` on `cluster2`, you can create a namespace for the two options and apply the `ConfigMap` and policies in both ( before applying the `ConfigMap` on each namespace, it should be updated to match the options for that deployment ):
+
+## Create multiple backup configurations
+
+To create multiple backup configurations you want to deploy the `PolicySet` on separate namespaces on the hub. For example, if you want to have a backup for `pacman` on `cluster1` and a backup for `pacman` and `busybox` on `cluster2`, you can create a namespace for the two options and apply the `ConfigMap` and policies in both ( before applying the `ConfigMap` on each namespace, it should be updated to match the options for that deployment ):
 
 ```
 oc create ns pacman-policy
