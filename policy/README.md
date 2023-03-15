@@ -255,7 +255,7 @@ Use the pacman app to test the policies. (You can use 2 separate hubs for the sa
 Backup step:<br>
 
 5. On the hub, set the `backup.nsToBackup: "[\"pacman-ns\"]" ` on the `hdr-app-configmap` resource. This will backup all resources from the `pacman-ns`
-6. Place the install and backup policies on c1 : create this label on c1 `acm-pv-dr=backup`
+6. Place the install and backup policies on c1 : create this label on managed cluster c1 `acm-pv-dr=backup` or update the `acm-app-backup-placement` placement rule of the `acm-app-backup` PolicySet to match cluster c1.
 
 
 Restore step:<br>
@@ -263,7 +263,7 @@ Restore step:<br>
 7. On the hub, on the `hdr-app-configmap` resource:
 - set the `restore.nsToRestore: "[\"pacman-ns\"]" `. This will restore all resources from the `pacman-ns`
 - set the `restore.backupName:` and use a backup name created from step 6
-8. Place the restore policy on c2 : create this label on c2 `acm-pv-dr=restore`
+8. Place the restore policy on c2 : create this label on managed cluster c2 `acm-pv-dr=restore` or update the `acm-app-restore-placement` placement rule of the `acm-app-restore` PolicySet  to match cluster c2.
 9. You should see the pacman app on c2; launch the pacman app and verify that you see the data saved when running the app on c1.
 
 
