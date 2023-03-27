@@ -38,6 +38,7 @@ A managed cluster can be a restore target if the PlacementRule for the `oadp-hdr
 
 A managed cluster can be both a backup and restore target, if the PlacementRule from the backup and restore PolicySets matches this cluster.
 
+![Application Backup and Restore Policy Dataflow](../images/app-policy.png)
 
 ## Prerequisites
 
