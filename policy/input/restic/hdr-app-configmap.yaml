@@ -7,6 +7,7 @@
 # see restic limitations here https://velero.io/docs/v1.9/restic/#limitations
 # use this option if the PV snapshot is not supported your backup and restore clusters are running on different platforms
 # or they are in different regions and can't share PV snapshots - otherwise use the configmap from the  pv-snap folder
+# values specified with brackets <> should be updated before applying this configmap
 #
 apiVersion: v1
 kind: ConfigMap
@@ -117,7 +118,7 @@ data:
 
 ## restore storage class mapping ##
   restore.storage.config.name: storage-class-acm-app
-  restore.mappings: "{
+  restore.storage.config.mappings: "{
       \"data\": {
           \"managed-csi\": \"thin\",
       },

@@ -37,7 +37,7 @@ data:
 # DPA spec
 # below is the spec format for an aws storage
 # update this with the DPA format for the type of storage you are using
-# values specified with brackets <> should be updated before appliying this configmap
+# values specified with brackets <> should be updated before applying this configmap
   dpa.spec: "{
   \"backupLocations\": [
     {
@@ -135,7 +135,7 @@ data:
 
 ## restore storage class mapping ##
   restore.storage.config.name: storage-class-acm-app
-  restore.mappings: "{
+  restore.storage.config.mappings: "{
       \"data\": {
           \"managed-csi\": \"thin\",
       },
