@@ -75,7 +75,7 @@ All values specified with brackets <> should be updated before applying the `hrd
 
 hrd-app-configmap input data               | Description 
 -------------------------------------------| ----------- 
-backupNS                                   | Used by the [oadp-hdr-app-install](./policies/oadp-hdr-app-install.yaml) policy. Namespace name where Velero/OADP is installed on the target cluster. If you want to place the application backup or restore policy on the hub, then first enable the backup and restore option on the MCH resource and use the `open-cluster-management-backup` value for the backupNS. If you don't enable the backup option on the MCH resource wihle using the `open-cluster-management-backup` value for the `backupNS`, the MCH will  delete this namespace when it reconciles. 
+backupNS                                   | Used by the [oadp-hdr-app-install](./policies/oadp-hdr-app-install.yaml) policy. Namespace name where Velero/OADP is installed on the target cluster. If the hub is one of the clusters where the policies will be placed, and the `backupNS=open-cluster-management-backup` then first enable cluster-backup on `MultiClusterHub`. The MultiClusterHub resource looks for the cluster-backup option and if set to false, it uninstalls OADP from the `open-cluster-management-backup` and deletes the namespace. 
 channel                                    | Used by the [oadp-hdr-app-install](./policies/oadp-hdr-app-install.yaml) policy. OADP operator install channel; set to stable-1.1 by default
 dpa.aws.backup.cloud.credentials           | Used by the [oadp-hdr-app-install](./policies/oadp-hdr-app-install.yaml) policy. Defines cloud-credential used to connect to the storage location, base64 encoded string. You must update this property with a valid value.
 dpaName                                    | Used by the [oadp-hdr-app-install](./policies/oadp-hdr-app-install.yaml) policy and sets the `DataProtectionApplication` resource name.
@@ -128,10 +128,16 @@ The configmap sets configuration options for the backup storage location, for th
 
 Make sure you <b>update all settings with valid values</b> before applying the `hdr-app-configmap` resource on the hub.
 
-<b>Note</b>:
+Note that you can still upate the `hdr-app-configmap` properties after the `ConfigMap` was applied to the hub. When you do that, the backup settings on the managed clusters where the PolicySet have been placed will be automatically updated with the new values for the `hdr-app-configmap`.  For example, to restore a new backup, update the `restore.backupName` property on the `hdr-app-configmap` on the hub; the change is pushed to the deployed policies on the managed clusters and a restore resource matching the new properties will be created there.
 
-- The `dpa.spec` property defines the storage location properties. The default value shows the `dpa.spec` format for using an S3 bucket. Update this to match the type of storage location you want to use.
-- You can still upate the `hdr-app-configmap` properties after the `ConfigMap` was applied to the hub. When you do that, the backup settings on the managed clusters where the PolicySet has been applied will be automatically updated with the new values for the `hdr-app-configmap`.  For example, to restore a new backup, update the `restore.backupName` property on the `hdr-app-configmap` on the hub; the change is pushed to the deployed policies on the managed cluster and a restore resource matching the new properties will be created there.
+### Apply policies on the hub
+
+Run `oc apply -k ./policy` to apply all resources at the same time on the hub. 
+
+Use the `kustomization.yaml` available with this project to install the backup and restore Policies and PolicySets on the hub. 
+
+None of the resources available with the project have a namespace setup. This is to allow the user to apply the Policies in different configurations for a different set of managed clusters.
+
 
 ## Create multiple backup configurations
 
@@ -148,23 +154,6 @@ oc create ns pac-bbox-policy
 oc project pac-bbox-policy
 oc apply -k ./policy
 ```
-
-### Prereq for placing this policies on the hub
-
-<b>Important:</b>
-
-If the hub is one of the clusters where this policy will be placed, and the `backupNS=open-cluster-management-backup` then first enable cluster-backup on `MultiClusterHub`. 
-
-The MultiClusterHub resource looks for the cluster-backup option and if set to false, it uninstalls OADP from the `open-cluster-management-backup` and deletes the namespace.
-
-
-
-### Apply policies on the hub
-
-Run `oc apply -k ./policy` to apply all resources at the same time on the hub. 
-
-Use the `kustomization.yaml` available with this project to install the backup and restore Policies and PolicySets on the hub. 
-None of the resources available with the project have a namespace setup. This is to allow the user to apply the Policies in different configurations for a different set of managed clusters.
 
 #### Backup PolicySet
 
