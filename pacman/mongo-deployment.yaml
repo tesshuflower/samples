@@ -18,10 +18,6 @@ spec:
         pre.hook.backup.velero.io/command: '["/bin/bash", "-c", "echo quiesce > /tmp/quiesce.txt"]'
         post.hook.backup.velero.io/container: mongo
         post.hook.backup.velero.io/command: '["/bin/bash", "-c", "echo after_backup > /tmp/after_backup.txt"]'
-        pre.hook.backup.velero.io/container: mongo
-        pre.hook.backup.velero.io/command: '["/sbin/fsfreeze", "--freeze", "/bitnami/mongodb/data/db"]'
-        post.hook.backup.velero.io/container: mongo
-        post.hook.backup.velero.io/command: '["/sbin/fsfreeze", "--unfreeze", "/bitnami/mongodb/data/db"]'
     spec:
       containers:
       - image: bitnami/mongodb:5.0.14
