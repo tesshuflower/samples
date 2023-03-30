@@ -279,26 +279,22 @@ The name for the init container that is being added.
 This is the ENTRYPOINT for the init container being added. This command is not executed within a shell and the container image’s ENTRYPOINT is used if this is not provided.
 
 
-<b>Note:</b>
-1. The restore operation doesn't update PV or PVC resources if the restored resource is already on the cluster where the app data is restored. Make sure your application is not installed on that cluster before the restore operation is executed - the PV or PVC available with the restore app should not exist on the restore cluster prior to the restore operation.
-2. The restore cluster must be able to access the region where the restore PV and snapshots are located.
-3. The restore cluster must have a `VolumeSnapshotLocation` velero resource with the same name as the one used by the backup `volumeSnapshotLocations` property. The `VolumeSnapshotLocation` resource from the restore cluster must point to the backed up PV snapshots location, otherwise the restore operation will fail to restore the PV.
-
 # Usage considerations
 
-1. When restoring a backup make sure the restore cluster doesn't already contain PVs and PVClaims with the same name as the ones restored with the backup. The PV and PVClaims will not be updated if they already exist on the restore cluster. 
-2. Using restic for backing up PVs (use the configmap from the `./policy/input/restic` folder)
+1. When restoring a backup make sure the restored namespaces don't exist on the cluster or they have the same `openshift.io/sa.scc` annotations as the namespaces in the backup. Even if the restore asks to update existing resources, the namespaces are not being updated to avoid breaking existing resources. You could have pod security violiation issues if the namespace `openshift.io/sa.scc` is not matching the pod constrains.
+2. When restoring a backup make sure the restore cluster doesn't already contain PVs and PVClaims with the same name as the ones restored with the backup. The PV and PVClaims will not be updated if they already exist on the restore cluster. 
+3. Using restic for backing up PVs (use the configmap from the `./policy/input/restic` folder)
     - Use this option if 
         - the PV snapshot is not supported
         - or your backup and restore clusters are running on different platforms 
         - or they are in different regions and can't share PV snapshots, 
     - See restic limitations here https://velero.io/docs/v1.9/restic/#limitations 
-3. Using PV Snapshot backup (use the configmap from the  `./policy/input/pv-snap` folder)
+4. Using PV Snapshot backup (use the configmap from the  `./policy/input/pv-snap` folder)
     - PVStorage for the backup resource must match the location of the PVs to be backed up. 
     - You cannot backup PVs from different regions/locations in the same backup, since a backup points to only one PVStorage
     -  You cannot restore a PV unless the restore resource points to the same PVStorage as the backup; so the restore cluster must have access to the PV snapshot storage location.
     - PV backup is storage/platform specific; you need the same storage class usage on both source ( where you backup the PV and take the snapshots) and on target cluster ( where you restore the PV snapshot )
-4. Policy template adds new data if the CRD allows: Updating the config map and reapplying it on hub could end up in duplicating resource properties. For example, if I want to update the `snapshotLocations` location property to `us-est-1`, after I update the config map I end up with a DataProtectionApplication object containing two `snapshotLocations`, one for the old value and another for the new one.  The fix would be to :
+5. Policy template adds new data if the CRD allows: Updating the config map and reapplying it on hub could end up in duplicating resource properties. For example, if I want to update the `snapshotLocations` location property to `us-est-1`, after I update the config map I end up with a DataProtectionApplication object containing two `snapshotLocations`, one for the old value and another for the new one.  The fix would be to :
     -  delete the policy and reapply - but this removes all the resources created by the policy, so a bit too aggressive.
     - manually remove the old property - hard to do and error prone if the resource was placed on a lot of clusters
 
