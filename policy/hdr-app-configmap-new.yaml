@@ -1,0 +1,122 @@
+# This configmap is used by the oadp-hdr-app-install and oadp-hdr-app-backup policies 
+# and specifies the configuration required to install velero and create backups 
+#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hdr-app-configmap
+data:
+  backupNS: open-cluster-management-backup
+  channel: stable-1.1
+  subscriptionName: redhat-oadp-operator
+
+## DPA resource configuration
+#
+  dpa.backup.cloud.credentials.name: cloud-credentials
+##
+  #dpa.aws.backup.cloud.credentials: W2RlZmF1bHRdCmF3c19hY2Nlc3Nfa2V5X2lkPUFLSUFRMlRKWU1FVkZXMkpBV1hHCmF3c19zZWNyZXRfYWNjZXNzX2tleT1HZDRNRTNiUmsrSFh5bzkvbk9rUTFsUXRHMjBta25ZeU96WjRpdVJq
+  dpa.aws.backup.cloud.credentials: W2RlZmF1bHRdCmF3c19hY2Nlc3Nfa2V5X2lkPUFLSUE0SlpZUEZFTzJIQVZHNkZFCmF3c19zZWNyZXRfYWNjZXNzX2tleT1XcE1zTmYwT0ZySkcwTzNlVzNLM3A0VE91NTZCeTV2VTZIdVdqWlM3
+  #dpa.aws.backup.cloud.credentials: W2RlZmF1bHRdCmF3c19hY2Nlc3Nfa2V5X2lkPUFLSUFRMlRKWU1FVkZXMkpBV1hHCmF3c19zZWNyZXRfYWNjZXNzX2tleT1HZDRNRTNiUmsrSFh5bzkvbk9rUTFsUXRHMjBta25ZeU96WjRpdVJq
+    
+
+## DPA resource configuration
+#
+  #DPA resource name; use the same name for all hubs, the PV cannot be restored if 
+  # the BackupStorageLocation resource doesn't have the same name
+  # on both backup and restore cluster 
+  dpaName: dpa
+
+#######
+# DPA spec
+# below is the spec format for an aws storage
+# update this with the DPA format for the type of storage you are using
+  dpa.spec: "{
+  \"backupLocations\": [
+    {
+      \"velero\": {
+        \"config\": {
+          \"profile\": \"default\",
+          \"region\": \"us-east-1\"
+        },
+        \"credential\": {
+          \"key\": \"cloud\",
+          \"name\": \"cloud-credentials\"
+        },
+        \"default\": true,
+        \"objectStorage\": {
+          \"bucket\": \"velero-backup-acm-vb\",
+          \"prefix\": \"vb-hubs\"
+        },
+        \"provider\": \"aws\"
+      }
+    }
+  ],
+  \"configuration\": {
+    \"restic\": {
+      \"enable\": true
+    },
+    \"velero\": {
+      \"defaultPlugins\": [
+        \"openshift\",
+        \"aws\"
+      ],
+      \"podConfig\": {
+        \"resourceAllocations\": {
+          \"limits\": {
+            \"cpu\": \"1\",
+            \"memory\": \"256Mi\"
+          },
+          \"requests\": {
+            \"cpu\": \"500m\",
+            \"memory\": \"128Mi\"
+          }
+        }
+      }
+    }
+  },
+    \"snapshotLocations\": [
+    {
+      \"velero\": {
+        \"config\": {
+          \"profile\": \"default\",
+          \"region\": \"us-west-1\"
+        },
+        \"provider\": \"aws\"
+      }
+    },
+  ]
+}"
+## END DPA ##
+
+###### backup schedule resource ###
+####################################
+   # the name of the resource to backup
+  backup.prefix: pacman
+
+  backup.snapshotVolumes: "false"
+  backup.defaultVolumesToRestic: "true"
+
+  backup.schedule: 0 */1 * * *
+  backup.ttl: 100h0m0s
+  backup.volumeSnapshotLocation: ''
+  backup.nsToBackup: "[\"pacman-from-hub-2\"]" # list here all apps ns you want to backup
+######################################
+###### end backup schedule resource ###
+
+
+###### restore resource ###
+####################################
+  restore.restorePVs: "false"
+  # the name of the backup to restore from
+  restore.backupName: "pacman-val-restic--local-cluster-20230309143503"
+  restore.nsToRestore: "[\"pacman-from-hub-2\"]" # list here all apps ns you want to restore from the specified backup
+######################################
+###### end backup schedule resource ###
+
+## restore storage class mapping ##
+  restore.storage.config.name: storage-class-acm-app
+  restore.storage.config.mappings: "{
+          \"managed-csi\": \"thin\",
+    }"
+
+##################################
