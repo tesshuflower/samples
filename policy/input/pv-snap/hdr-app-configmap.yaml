@@ -140,14 +140,4 @@ data:
     }"
 ##################################
 
-###### restore resource ###
-####################################
-  # the name of the backup to restore from
-  # for example backupName: acm-pv-schedule-vb-managed-cls-1-20230208150010
-  restore.backupName: <backup-name>
-  # list here all apps ns you want to restore from the specified backup
-  # for example backup.nsToBackup: "[\"pacman-ns\"]"
-  restore.nsToRestore: "[\"app1-ns\", \"app2-ns\"]"
-######################################
-###### end backup schedule resource ###
 

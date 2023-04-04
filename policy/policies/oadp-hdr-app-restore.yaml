@@ -70,15 +70,14 @@ spec:
                 apiVersion: velero.io/v1
                 kind: Restore
                 metadata:
-                  name: 'restore-{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'
+                  name: 'restore-{{ fromClusterClaim "acm-app-restore" }}'
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                   labels:
                     cluster-id: '{{ fromClusterClaim "id.openshift.io" }}'
                     cluster-name: '{{ fromClusterClaim "name" }}'
                 spec:
                   existingResourcePolicy: update
-                  includedNamespaces: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.nsToRestore" | toLiteral hub}}'
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'
+                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'
                   restorePVs: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.restorePVs" | toBool hub}}'            
           remediationAction: enforce
           severity: high

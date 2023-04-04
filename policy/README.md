@@ -69,7 +69,7 @@ Make sure you <b>update all settings with valid values</b> before applying the `
 <b>Note</b>:
 
 - The `dpa.spec` property defines the storage location properties. The default value shows the `dpa.spec` format for using an S3 bucket. Update this to match the type of storage location you want to use.
-- You can still upate the `hdr-app-configmap` properties after the `ConfigMap` was applied to the hub. When you do that, the backup settings on the managed clusters where the PolicySet has been applied will be automatically updated with the new values for the `hdr-app-configmap`.  For example, to restore a new backup, update the `restore.backupName` property on the `hdr-app-configmap` on the hub; the change is pushed to the deployed policies on the managed cluster and a restore resource matching the new properties will be created there.
+- You can still upate the `hdr-app-configmap` properties after the `ConfigMap` was applied to the hub. When you do that, the backup settings on the managed clusters where the PolicySet has been applied will be automatically updated with the new values for the `hdr-app-configmap`.
 
 All values specified with brackets <> should be updated before applying the `hrd-app-configmap`.
 
@@ -87,8 +87,6 @@ backup.schedule                             | Used by the [oadp-hdr-app-backup](
 backup.ttl                                  | Used by the [oadp-hdr-app-backup](./policies/oadp-hdr-app-backup.yaml) policy. Defines the expiration time for the backups.
 backup.nsToBackup                           | Used by the [oadp-hdr-app-backup](./policies/oadp-hdr-app-backup.yaml) policy. Defines the list of namespaces to backup. It backs up all resources from these namespaces, including the PV and PVC used by the applications running in these namespaces.
 restore.restorePVs                          | Used by the [oadp-hdr-app-restore](./policies/oadp-hdr-app-restore.yaml) policy. Set to `true` if the bacup to restore had used `backup.snapshotVolumes:true`, should be set to `false` otherwise.
-restore.backupName                          | Used by the [oadp-hdr-app-restore](./policies/oadp-hdr-app-restore.yaml) policy. Sets the name of the backup to restore from, for example `acm-app-<volumeSnapshotLocation>-managed-cls-name-20230309143503`.
-restore.nsToRestore                         | Used by the [oadp-hdr-app-restore](./policies/oadp-hdr-app-restore.yaml) policy. Defines the list of namespaces to restore from the backup file.
 restore.storage.config.name                 | Used by the [oadp-hdr-app-restore](./policies/oadp-hdr-app-restore.yaml) policy. Restore storage config map resource name [class mapping](https://velero.io/docs/main/restore-reference/#changing-pvpvc-storage-classes), used when the source cluster has a different storage class than the restore cluster. You can optionally change the default value `storage-class-acm-app`. 
 restore.mappings                            | Used by the [oadp-hdr-app-restore](./policies/oadp-hdr-app-restore.yaml) policy and in conjunction with the  `restore.storage.config.name`. Defines the data for the storage config map resource name.        
 
@@ -128,7 +126,7 @@ The configmap sets configuration options for the backup storage location, for th
 
 Make sure you <b>update all settings with valid values</b> before applying the `hdr-app-configmap` resource on the hub.
 
-Note that you can still upate the `hdr-app-configmap` properties after the `ConfigMap` was applied to the hub. When you do that, the backup settings on the managed clusters where the PolicySet have been placed will be automatically updated with the new values for the `hdr-app-configmap`.  For example, to restore a new backup, update the `restore.backupName` property on the `hdr-app-configmap` on the hub; the change is pushed to the deployed policies on the managed clusters and a restore resource matching the new properties will be created there.
+Note that you can still upate the `hdr-app-configmap` properties after the `ConfigMap` was applied to the hub. When you do that, the backup settings on the managed clusters where the PolicySet have been placed will be automatically updated with the new values for the `hdr-app-configmap`. 
 
 ### Apply policies on the hub
 
@@ -184,26 +182,9 @@ For example, if you need to backup `pacman` application running on `managed-1`, 
 
 If you need to restore `pacman` application running on `managed-4` cluster and want to restore `mysql` on `managed-5`, you can apply the restore policy set and use 2 different namespaces:
 
-1. For the `pacman` app:
-- update the  `hdr-app-configmap` and set `restore.nsToRestore: "[\"pacman-ns\"]`
-- update `restore.backupName` and set the backup name you want to restore
-- update the `acm-app-restore-placement` PlacementRule under `acm-app-restore-policy-set.yaml` to match the `managed-4` cluster (or add the `acm-pv-dr=restore` label to the cluster).
-- create `dr-app-pacman-ns` ( or use your own preferred ns ) - where the restore policy for pacman app will be created on the hub
-- create the policies under that ns 
-
-`oc project dr-app-pacman-ns`
-`oc kustomize ./policy`
-
-
-1. For the `mysql` app:
-- update the  `hdr-app-configmap` and set `restore.nsToRestore: "[\"mysql-ns\"]`
-- update `restore.backupName` and set the backup name you want to restore
-- update the `acm-app-restore-placement` PlacementRule under `acm-app-restore-policy-set.yaml` to match the `managed-5` cluster (or add the `acm-pv-dr=restore` label to the cluster).
-- create `dr-app-mysql-ns` ( or use your own preferred ns, with no restore policy applied ) - where the restore policy for mysql app will be created on the hub
-- create the policies under that ns 
-
-`oc project dr-app-mysql-ns`
-`oc kustomize ./policy`
+1. To restore a backup on `managed-4` cluster:
+- add the `acm-app-restore=<backup_name>` label to the `managed-4` cluster.
+The `acm-app-restore` label is going to place the restore policy on `managed-4` cluster and restore the <backup_name> passed as a value for the restore label. 
 
 
 
@@ -251,7 +232,7 @@ If you want to prepare the application before running the backup, you can use th
 
 If the hub manages clusters where stateful applications backups must be restored, then you must install the `oadp-hdr-app-backup-set` policySet.
 
-If the managed cluster (or hub) matches the PlacementRule for the `oadp-hdr-app-restore-set` policySet, then the oadp-hdr-app-restore policy is propagated to this cluster for a restore operation. Read [Restore PolicySet](#restore-policyset) for more details on how this works.
+If the managed cluster (or hub) has the `acm-app-restore=<backup-name>` label then the oadp-hdr-app-restore policy is propagated to this cluster for a restore operation. Read [Restore PolicySet](#restore-policyset) for more details on how this works.
 
 This cluster restores applications backup.
 
@@ -264,7 +245,7 @@ The  policy also informs on any restore configuration error.
 This policy creates a velero restore resource to all managed clusters that match the PlacementRule for the `oadp-hdr-app-restore-set` policySet.
 The restore resource is used to restore applications resources and PVs
 from a selected backup.
-The restore uses the `nsToRestore` hdr-app-configmap property to specify the namespaces for the applications to restore.
+
 
 ### Restore pre and post hooks 
 
@@ -281,7 +262,7 @@ This is the ENTRYPOINT for the init container being added. This command is not e
 
 # Usage considerations
 
-1. When restoring a backup make sure the restored namespaces don't exist on the cluster or they have the same `openshift.io/sa.scc` annotations as the namespaces in the backup. Even if the restore asks to update existing resources, the namespaces are not being updated to avoid breaking existing resources. You could have pod security violiation issues if the namespace `openshift.io/sa.scc` is not matching the pod constrains.
+1. When restoring a backup make sure the restored namespaces don't exist on the cluster or they have the same `openshift.io/sa.scc` annotations as the namespaces in the backup. Even if the restore asks to update existing resources, the namespaces are not being updated to avoid breaking existing resources. You could have pod security violiation issues if the namespace `openshift.io/sa.scc` is not matching the pod constraints.
 2. When restoring a backup make sure the restore cluster doesn't already contain PVs and PVClaims with the same name as the ones restored with the backup. The PV and PVClaims will not be updated if they already exist on the restore cluster. 
 3. Using restic for backing up PVs (use the configmap from the `./policy/input/restic` folder)
     - Use this option if 
@@ -320,11 +301,8 @@ Backup step:<br>
 
 Restore step:<br>
 
-7. On the hub, on the `hdr-app-configmap` resource:
-- set the `restore.nsToRestore: "[\"pacman-ns\"]" `. This will restore all resources from the `pacman-ns`
-- set the `restore.backupName:` and use a backup name created from step 6
-8. Place the restore policy on c2 : create this label on managed cluster c2 `acm-pv-dr=restore` or update the `acm-app-restore-placement` placement rule of the `acm-app-restore` PolicySet  to match cluster c2.
-9. You should see the pacman app on c2; launch the pacman app and verify that you see the data saved when running the app on c1.
+7. Place the restore policy on c2 : create this label on managed cluster c2 `acm-app-restore=<backup_name>`; use the backup name you want to restore, which is a backup resource created from step 6 
+8. You should see the pacman app on c2; launch the pacman app and verify that you see the data saved when running the app on c1.
 
 
 # Example of pre and post backup hooks:
