@@ -6,18 +6,9 @@
 # Create this policy on the hub managing clusters where you want to create stateful applications backups, 
 # and after you create the oadp-hdr-app-install and oadp-hdr-app-validation policies.
 #
-# Both policies, oadp-hdr-app-backup and oadp-hdr-app-restore can be installed on the same hub,
-# if this hub manages clusters where applications need to be backed up or restored. 
-#
-# Note that a managed cluster can either be a backup target or a restore target, not both at the same time.
-#
-# - If the managed cluster (or hub) has the label "acm-pv-dr=backup" then the oadp-hdr-app-backup policy 
-# is propagated to this cluster for an application backup schedule. This cluster produces applications backups.
+# - If the managed cluster (or hub) has the label "acm-pv-dr=backup" then the oadp-hdr-app-install and oadp-hdr-app-restore policies 
+# are propagated to this cluster for an application backup schedule. This cluster produces applications backups.
 # Make sure the hdr-app-configmap's backup schedule resource settings are properly set before applying this policy.
-#
-# - If the managed cluster (or hub) has the label "acm-pv-dr=restore" then the oadp-hdr-app-restore policy 
-# is propagated to this cluster for backup restore operation. This cluster restores applications backup.
-# Make sure the hdr-app-configmap's restore resource settings are properly set before applying this policy.
 #
 # Note that it is set to enforce by default.
 #
