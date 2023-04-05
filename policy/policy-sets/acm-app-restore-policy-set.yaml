@@ -8,6 +8,7 @@ spec:
     - oadp-hdr-app-install
     - oadp-hdr-app-restore
 ---
+# the value for the acm-app-restore label is the name of the backup to restore
 apiVersion: apps.open-cluster-management.io/v1
 kind: PlacementRule
 metadata:
