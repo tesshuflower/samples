@@ -4,12 +4,10 @@ Stateful application DR using ACM policies
 ------
 
 - [Scenario](#scenario)
-- [Prerequisites](#prerequisites)
-  - [Apply policies on the hub](#apply-policies-on-the-hub)
-    - [Backup PolicySet](#backup-policyset)
-    - [Restore PolicySet](#restore-policyset)
-  - [Setup hdr-app-configmap ConfigMap](#setup-hdr-app-configmap-configmap)
-  - [Install policy](#install-policy)
+- [Apply policies on the hub](#apply-policies-on-the-hub)
+- [List of PolicySets](#list-of-policysets)
+- [List of Policies](#list-of-policies)
+- [hdr-app-configmap ConfigMap](#policies-input-data-using-hdr-app-configmap)
 - [Create multiple backup configurations](#create-multiple-backup-configurations)
 - [Backup applications](#backup-applications)
   - [Backup pre and post hooks](#backup-pre-and-post-hooks)
@@ -38,6 +36,30 @@ A managed cluster can be a restore target if the PlacementRule for the [oadp-hdr
 
 A managed cluster can be both a backup and restore target, if the PlacementRule from the backup and restore PolicySets matches this cluster.
 
+## Apply policies on the hub
+
+Run `oc apply -k ./policy/resources` to apply the backup and restore Policies and PolicySets on the hub. 
+
+None of the resources available with the project have a namespace setup. This is to allow the user to apply the Policies in different configurations for a different set of managed clusters.
+
+The policies use the [configmaps](./input/) to configure the backup setup so you have to create a ConfigMap resource named `hdr-app-configmap` in the same namespace where the policies were applied on the hub.
+
+Use [restic config](./input/pv-snap/hdr-app-configmap.yaml) settings if you want to use Restic when backing up data.Use the [pv config](./input/pv-snap/hdr-app-configmap.yaml) if you want to use Persistent Volume Snapshot instead of [Restic](https://velero.io/docs/v1.9/restic).
+
+Make sure you <b>update all settings with valid values</b> before applying the `hdr-app-configmap` resource on the hub.
+
+Use Restic if: 
+- the PV snapshot is not supported 
+- or your backup and restore clusters are running on different platforms 
+- or they are in different regions and can't share PV snapshots, 
+See restic limitations here https://velero.io/docs/v1.9/restic/#limitations 
+
+PV Snapshot usage limitations:
+- PVStorage for the backup resource must match the location of the PVs to be backed up. 
+- You cannot backup PVs from different regions/locations in the same backup, since a backup points to only one PVStorage
+-  You cannot restore a PV unless the restore resource points to the same PVStorage as the backup; so the restore cluster must have access to the PV snapshot storage location.
+- PV backup is storage/platform specific; you need the same storage class usage on both source ( where you backup the PV and take the snapshots) and on target cluster ( where you restore the PV snapshot )
+
 
 ## List of PolicySets 
 
@@ -58,18 +80,6 @@ Policy                                     | Description
 
 ## Policies input data using hdr-app-configmap 
 
-Before you install the backup and restore Policies and PolicySets on the hub, you have to update the `hdr-app-configmap` available [here](./input/). 
-
-You create the configmap on the hub, the same hub where the policies will be installed.
-
-The configmap sets configuration options for the backup storage location, for the backup schedule backing up applications, and for the restore resource used to restore applications backups.
-
-Make sure you <b>update all settings with valid values</b> before applying the `hdr-app-configmap` resource on the hub.
-
-<b>Note</b>:
-
-- The `dpa.spec` property defines the storage location properties. The default value shows the `dpa.spec` format for using an S3 bucket. Update this to match the type of storage location you want to use.
-- You can still upate the `hdr-app-configmap` properties after the `ConfigMap` was applied to the hub. When you do that, the backup settings on the managed clusters where the PolicySet has been applied will be automatically updated with the new values for the `hdr-app-configmap`.
 
 All values specified with brackets <> should be updated before applying the `hrd-app-configmap`.
 
@@ -90,51 +100,11 @@ restore.restorePVs                          | Used by the [oadp-hdr-app-restore]
 restore.storage.config.name                 | Used by the [oadp-hdr-app-restore](./policies/oadp-hdr-app-restore.yaml) policy. Restore storage config map resource name [class mapping](https://velero.io/docs/main/restore-reference/#changing-pvpvc-storage-classes), used when the source cluster has a different storage class than the restore cluster. You can optionally change the default value `storage-class-acm-app`. 
 restore.mappings                            | Used by the [oadp-hdr-app-restore](./policies/oadp-hdr-app-restore.yaml) policy and in conjunction with the  `restore.storage.config.name`. Defines the data for the storage config map resource name.        
 
-## Notes on Kustomization
 
-Apply the PolicySets by running the [kustomization.yaml](./kustomization.yaml)
+<b>Note</b>:
 
-`oc apply -k ./acm-app-backup`
-
-Update all settings with valid values before applying the `hdr-app-configmap` resource on the hub.
-The `kustomization.yaml` uses the [restic config](./input/pv-snap/hdr-app-configmap.yaml); you can change it to use the [pv config](./input/pv-snap/hdr-app-configmap.yaml) if you want to use Persistent Volume Snapshot instead of [Restic](https://velero.io/docs/v1.9/restic).
-
-Use Restic if: 
-- the PV snapshot is not supported 
-- or your backup and restore clusters are running on different platforms 
-- or they are in different regions and can't share PV snapshots, 
-See restic limitations here https://velero.io/docs/v1.9/restic/#limitations 
-
-PV Snapshot usage limitations:
-- PVStorage for the backup resource must match the location of the PVs to be backed up. 
-- You cannot backup PVs from different regions/locations in the same backup, since a backup points to only one PVStorage
--  You cannot restore a PV unless the restore resource points to the same PVStorage as the backup; so the restore cluster must have access to the PV snapshot storage location.
-- PV backup is storage/platform specific; you need the same storage class usage on both source ( where you backup the PV and take the snapshots) and on target cluster ( where you restore the PV snapshot )
-
-
-## Prerequisites
-
-
-### Setup hdr-app-configmap ConfigMap
-
-
-Before you install the backup and restore Policies and PolicySets on the hub, you have to update the `hdr-app-configmap` ConfigMap values. 
-
-You create the configmap on the hub, the same hub where the policies will be installed.
-
-The configmap sets configuration options for the backup storage location, for the backup schedule backing up applications, and for the restore resource used to restore applications backups.
-
-Make sure you <b>update all settings with valid values</b> before applying the `hdr-app-configmap` resource on the hub.
-
-Note that you can still upate the `hdr-app-configmap` properties after the `ConfigMap` was applied to the hub. When you do that, the backup settings on the managed clusters where the PolicySet have been placed will be automatically updated with the new values for the `hdr-app-configmap`. 
-
-### Apply policies on the hub
-
-Run `oc apply -k ./policy` to apply all resources at the same time on the hub. 
-
-Use the `kustomization.yaml` available with this project to install the backup and restore Policies and PolicySets on the hub. 
-
-None of the resources available with the project have a namespace setup. This is to allow the user to apply the Policies in different configurations for a different set of managed clusters.
+- The `dpa.spec` property defines the storage location properties. The default value shows the `dpa.spec` format for using an S3 bucket. Update this to match the type of storage location you want to use.
+- You can still upate the `hdr-app-configmap` properties after the `ConfigMap` was applied to the hub. When you do that, the backup settings on the managed clusters where the PolicySet has been applied will be automatically updated with the new values for the `hdr-app-configmap`.
 
 
 ## Create multiple backup configurations
@@ -164,7 +134,7 @@ For example, if you need to backup `pacman` application running on `managed-1`, 
 - create the policies under that ns 
 
 `oc project dr-app-pacman-ns`
-`oc kustomize ./policy`
+`oc apply -k ./policy/resources`
 
 
 1. For the `mysql` app:
@@ -174,7 +144,7 @@ For example, if you need to backup `pacman` application running on `managed-1`, 
 - create the policies under that ns 
 
 `oc project dr-app-mysql-ns`
-`oc kustomize ./policy`
+`oc apply -k ./policy/resources`
 
 
 
