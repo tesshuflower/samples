@@ -114,13 +114,13 @@ To create multiple backup configurations you want to deploy the `PolicySet` on s
 ```
 oc create ns pacman-policy
 oc project pacman-policy
-oc apply -k ./policy
+oc apply -k ./policy/resources
 ```
 
 ```
 oc create ns pac-bbox-policy
 oc project pac-bbox-policy
-oc apply -k ./policy
+oc apply -k ./policy/resources
 ```
 
 #### Backup PolicySet
