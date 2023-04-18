@@ -85,7 +85,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
+                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
                 status:
                   phase: Failed                                                            
           remediationAction: inform
@@ -104,7 +104,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
+                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
                 status:
                   phase: PartiallyFailed                                                            
           remediationAction: inform
@@ -123,7 +123,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
+                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
                 status:
                   phase: FailedValidation                                                            
           remediationAction: inform
@@ -142,7 +142,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
+                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
                 status:
                   phase: InProgress                                                            
           remediationAction: inform
@@ -161,7 +161,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
+                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
                 status:
                   phase: ''                                                            
           remediationAction: inform
@@ -180,7 +180,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
+                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
                 status:
                   phase: Completed                                                            
           remediationAction: inform
