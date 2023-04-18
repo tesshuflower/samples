@@ -21,7 +21,7 @@ Stateful application DR using ACM policies
 
 ## List of PolicySets 
 
-<div style="width:250px">PolicySet</div>   | Description 
+PolicySet   | Description 
 -------------------------------------------| ----------- 
 [acm-app-backup](./resources/policy-sets/acm-app-backup-policy-set.yaml)   | This PolicySet is used to place the [oadp-hdr-app-install](./resources/policies/oadp-hdr-app-install.yaml) and [oadp-hdr-app-backup](./resources/policies/oadp-hdr-app-backup.yaml) policies on managed clusters using the [acm-app-backup-placement](./resources/policy-sets/acm-app-backup-policy-set.yaml) rule, which is all managed clusters with a label "acm-pv-dr=backup". Update the placement rule if you want to customize the target cluster list.
 [acm-app-restore](./resources/policy-sets/acm-app-restore-policy-set.yaml)                            | This PolicySet is used to place the [oadp-hdr-app-install](./resources/policies/oadp-hdr-app-install.yaml) and [oadp-hdr-app-restore](./resources/policies/oadp-hdr-app-restore.yaml) policies on managed clusters using the [acm-app-restore-placement](./resources/policy-sets/acm-app-restore-policy-set.yaml) rule, which is all managed clusters with a label `acm-app-restore=<backup-name>` label. The `<backup-name>` from the label is the name of the backup that will be restored on this cluster.
@@ -30,7 +30,7 @@ Stateful application DR using ACM policies
 
 ## List of Policies 
 
-<div style="width:250px">Policy</div>      | Description 
+Policy      | Description 
 -------------------------------------------| ----------- 
 [oadp-hdr-app-install](./resources/policies/oadp-hdr-app-install.yaml)                       | Deploys velero using the OADP operator to all managed clusters matching the acm-app-backup-placement or acm-app-restore-placement rules. Installs the [OADP Operator](https://github.com/openshift/oadp-operator) using the [hdr-app-configmap](./input/restic/hdr-app-configmap.yaml) `channel` and `subscriptionName` properties. Creates the cloud credentials secret used by the `DataProtectionApplication.oadp.openshift.io` to connect with the backup storage. The cloud credentials secret is set using the [hdr-app-configmap](./input/restic/hdr-app-configmap.yaml) `dpa.aws.backup.cloud.credentials` property. Creates the `DataProtectionApplication.oadp.openshift.io` resource used to configure [Velero](https://velero.io/). Uses hdr-app-configmap `dpaName` for the DataProtectionApplication name and hdr-app-configmap `dpa.spec` for the resource spec settings. Informs on Velero pod not running, or DataProtectionApplication not properly configured.
 [oadp-hdr-app-backup](./resources/policies/oadp-hdr-app-backup.yaml)                         | Creates a velero backup schedule on managed clusters matching the [acm-app-backup-placement](./resources/policy-sets/acm-app-backup-policy-set.yaml) rules. The schedule is used to backup applications resources and PVs. Informs on backup errors.
@@ -42,7 +42,7 @@ Stateful application DR using ACM policies
 
 All values specified with brackets <> should be updated before applying the `hrd-app-configmap`.
 
-<div style="width:250px">hrd-app-configmap ConfigMap</div>               | Description 
+hrd-app-configmap ConfigMap               | Description 
 -------------------------------------------| ----------- 
 backupNS                                   | Used by the [oadp-hdr-app-install](./resources/policies/oadp-hdr-app-install.yaml) policy. Namespace name where Velero/OADP is installed on the target cluster. If the hub is one of the clusters where the policies will be placed, and the `backupNS=open-cluster-management-backup` then first enable cluster-backup on `MultiClusterHub`. The MultiClusterHub resource looks for the cluster-backup option and if set to false, it uninstalls OADP from the `open-cluster-management-backup` and deletes the namespace. 
 channel                                    | Used by the [oadp-hdr-app-install](./resources/policies/oadp-hdr-app-install.yaml) policy. OADP operator install channel; set to stable-1.1 by default
