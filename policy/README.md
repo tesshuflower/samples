@@ -88,8 +88,6 @@ A managed cluster can be both a backup and restore target, if the PlacementRule 
 
 Run `oc apply -k ./policy/resources` to apply the backup and restore Policies and PolicySets on the hub. 
 
-None of the resources available with the project have a namespace setup. This is to allow the user to apply the Policies in different configurations for a different set of managed clusters.
-
 The policies use the [configmaps](./input/) to configure the backup setup so you have to create a ConfigMap resource named `hdr-app-configmap` in the same namespace where the policies were applied on the hub.
 
 Use [restic config](./input/pv-snap/hdr-app-configmap.yaml) settings if you want to use Restic when backing up data.Use the [pv config](./input/pv-snap/hdr-app-configmap.yaml) if you want to use Persistent Volume Snapshot instead of [Restic](https://velero.io/docs/v1.9/restic).
@@ -111,7 +109,14 @@ PV Snapshot usage limitations:
 
 ## Create multiple backup configurations
 
-To create multiple backup configurations you want to deploy the `PolicySet` on separate namespaces on the hub. For example, if you want to have a backup for `pacman` on `cluster1` and a backup for `pacman` and `busybox` on `cluster2`, you can create a namespace for the two options and apply the `ConfigMap` and policies in both ( before applying the `ConfigMap` on each namespace, it should be updated to match the options for that deployment ):
+To create multiple backup configurations you need to update the `PolicySet` placement rule 
+
+To create multiple backup configurations you want to deploy the `PolicySet` on separate namespaces on the hub. 
+In each namespace update the `PolicySet` placement binding to match the set of managed clusters you want to place the policies on. 
+For example, if you want to have a backup for `pacman` on `cluster1` and a backup for `pacman` and `busybox` on `cluster2`:
+-  Create two namespaces and apply the `hdr-app-configmap` ConfigMap and Policies to both; before applying the `hdr-app-configmap`, update the ConfigMap properties to match the options for that cluster.
+- Update the `acm-app-backup-placement` rule on first namespace to match `cluster1` and the rule on second namespace to match `cluster2`.
+- Apply the policies on both namespaces.
 
 ```
 oc create ns pacman-policy
@@ -152,11 +157,18 @@ For example, if you need to backup `pacman` application running on `managed-1`, 
 
 #### Restore PolicySet
 
+To restore a backup on `managed-4` cluster, add the `acm-app-restore=<backup_name>` label to the `managed-4` cluster.
+The `acm-app-restore` label is going to place the restore policy on `managed-4` cluster and restore the <backup_name> passed as a value for the restore label. 
+
+<b>Important:</b>
+- Since the `acm-app-restore` results in this policy to be applied to any cluster with this label, you may update the `acm-app-restore-placement` rule and add a second matching rule to match only `managed-4` cluster. In this way this restore policy targets only `managed-4`. 
+- Alternatively, you may want to remove the `acm-app-restore` label from the managed cluster after the restore is completed. This will clean up the OADP operator installation though on the managed cluster, if the OADP operator was not available on the cluster at the time of the restore and it was installed by this policy.
+
 If you need to restore `pacman` application running on `managed-4` cluster and want to restore `mysql` on `managed-5`, you can apply the restore policy set and use 2 different namespaces:
 
 1. To restore a backup on `managed-4` cluster:
 - add the `acm-app-restore=<backup_name>` label to the `managed-4` cluster.
-The `acm-app-restore` label is going to place the restore policy on `managed-4` cluster and restore the <backup_name> passed as a value for the restore label. 
+- update `acm-app-restore-placement` rule to match `managed-4` cluster only.
 
 
 
