@@ -3,38 +3,24 @@
 Stateful application DR using ACM policies 
 ------
 
-- [List of PolicySets](#list-of-policysets)
 - [List of Policies](#list-of-policies)
 - [hdr-app-configmap ConfigMap](#policies-input-data-using-hdr-app-configmap)
 - [Scenario](#scenario)
 - [Apply policies on the hub](#apply-policies-on-the-hub)
 - [Create multiple backup configurations](#create-multiple-backup-configurations)
-- [Backup applications](#backup-applications)
-  - [Backup pre and post hooks](#backup-pre-and-post-hooks)
-- [Restore applications](#restore-applications)
-  - [Restore pre and post hooks](#restore-pre-and-post-hooks)
-- [Example of pre and post backup hooks](#example-of-pre-and-post-backup-hooks)
 - [Usage considerations](#usage-considerations)
 - [Testing Scenario - pacman](#testing-scenario)
+- [Backup and Restore hooks](#backup-and-restore-hooks)
 
 ------
-
-## List of PolicySets 
-
-PolicySet   | Description 
--------------------------------------------| ----------- 
-[acm-app-backup](./resources/policy-sets/acm-app-backup-policy-set.yaml)   | This PolicySet is used to place the [oadp-hdr-app-install](./resources/policies/oadp-hdr-app-install.yaml) and [oadp-hdr-app-backup](./resources/policies/oadp-hdr-app-backup.yaml) policies on managed clusters using the [acm-app-backup-placement](./resources/policy-sets/acm-app-backup-policy-set.yaml) rule, which is all managed clusters with a label "acm-pv-dr=backup". Update the placement rule if you want to customize the target cluster list.
-[acm-app-restore](./resources/policy-sets/acm-app-restore-policy-set.yaml)                            | This PolicySet is used to place the [oadp-hdr-app-install](./resources/policies/oadp-hdr-app-install.yaml) and [oadp-hdr-app-restore](./resources/policies/oadp-hdr-app-restore.yaml) policies on managed clusters using the [acm-app-restore-placement](./resources/policy-sets/acm-app-restore-policy-set.yaml) rule, which is all managed clusters with a label `acm-app-restore=<backup-name>` label. The `<backup-name>` from the label is the name of the backup that will be restored on this cluster.
-
-
 
 ## List of Policies 
 
 Policy      | Description 
 -------------------------------------------| ----------- 
-[oadp-hdr-app-install](./resources/policies/oadp-hdr-app-install.yaml)                       | Deploys velero using the OADP operator to all managed clusters matching the acm-app-backup-placement or acm-app-restore-placement rules. Installs the [OADP Operator](https://github.com/openshift/oadp-operator) using the [hdr-app-configmap](./input/restic/hdr-app-configmap.yaml) `channel` and `subscriptionName` properties. Creates the cloud credentials secret used by the `DataProtectionApplication.oadp.openshift.io` to connect with the backup storage. The cloud credentials secret is set using the [hdr-app-configmap](./input/restic/hdr-app-configmap.yaml) `dpa.aws.backup.cloud.credentials` property. Creates the `DataProtectionApplication.oadp.openshift.io` resource used to configure [Velero](https://velero.io/). Uses hdr-app-configmap `dpaName` for the DataProtectionApplication name and hdr-app-configmap `dpa.spec` for the resource spec settings. Informs on Velero pod not running, or DataProtectionApplication not properly configured.
-[oadp-hdr-app-backup](./resources/policies/oadp-hdr-app-backup.yaml)                         | Creates a velero backup schedule on managed clusters matching the [acm-app-backup-placement](./resources/policy-sets/acm-app-backup-policy-set.yaml) rules. The schedule is used to backup applications resources and PVs. Informs on backup errors.
-[oadp-hdr-app-restore](./resources/policies/oadp-hdr-app-restore.yaml)                        | Creates a velero restore resource on managed clusters matching the [acm-app-restore-placement](./resources/policy-sets/acm-app-restore-policy-set.yaml) rules. The restore resource is used to restore applications resources and PVs from a selected backup. 
+[oadp-hdr-app-install](./resources/policies/oadp-hdr-app-install.yaml)                       | Deploys velero using the OADP operator to all managed clusters matching the [oadp-hdr-app-install-placement](./resources/placements/oadp-hdr-app-install-placement.yaml) rules. Installs the [OADP Operator](https://github.com/openshift/oadp-operator) using the [hdr-app-configmap](./input/restic/hdr-app-configmap.yaml) `channel` and `subscriptionName` properties. Creates the cloud credentials secret used by the `DataProtectionApplication.oadp.openshift.io` to connect with the backup storage. The cloud credentials secret is set using the [hdr-app-configmap](./input/restic/hdr-app-configmap.yaml) `dpa.aws.backup.cloud.credentials` property. Creates the `DataProtectionApplication.oadp.openshift.io` resource used to configure [Velero](https://velero.io/). Uses hdr-app-configmap `dpaName` for the DataProtectionApplication name and hdr-app-configmap `dpa.spec` for the resource spec settings. Informs on Velero pod not running, or DataProtectionApplication not properly configured.
+[oadp-hdr-app-backup](./resources/policies/oadp-hdr-app-backup.yaml)                         | Creates a velero backup schedule on managed clusters matching the [oadp-hdr-app-backup-placement](./resources/placements/oadp-hdr-app-backup-placement.yaml) rules. The schedule is used to backup applications resources and PVs. Informs on backup errors.
+[oadp-hdr-app-restore](./resources/policies/oadp-hdr-app-restore.yaml)                        | Creates a velero restore resource on managed clusters matching the [oadp-hdr-app-restore-placement](./resources/placements/oadp-hdr-app-restore-placement.yaml) rules. The restore resource is used to restore applications resources and PVs from a selected backup. 
 
 
 ## Policies input data using hdr-app-configmap 
@@ -52,41 +38,35 @@ dpa.spec                                   | Used by the [oadp-hdr-app-install](
 backup.prefix                              | Used by the [oadp-hdr-app-backup](./resources/policies/oadp-hdr-app-backup.yaml) policy and sets the name prefix for the backup resource. It defaults to `acm-app` so the backup on `managed-cls-name` will be in this format : `acm-app-<volumeSnapshotLocation>-managed-cls-name-20230309143503`. You can optionally change the prefix if you want to match the name of the application you are backing up, for example to `pacman-app` if you are backing up the pacman application; in this case the backup name becomes `pacman-app-<volumeSnapshotLocation>-managed-cls-name-20230309143503`.
 backup.snapshotVolumes                     | Used by the [oadp-hdr-app-backup](./resources/policies/oadp-hdr-app-backup.yaml) policy. Set to `true` if you want to create backup snapshots instead of restic. This is the value used by the [pv snapshot config](./input/pv-snap/hdr-app-configmap.yaml). It is set to `false` by the [restic config](./input/restic/hdr-app-configmap.yaml).
 backup.defaultVolumesToRestic               | Used by the [oadp-hdr-app-backup](./resources/policies/oadp-hdr-app-backup.yaml) policy. Set to `false` if you want to create backup snapshots instead of restic. This is the value used by the [pv snapshot config](./input/pv-snap/hdr-app-configmap.yaml). It is set to `true` by the [restic config](./input/restic/hdr-app-configmap.yaml).
+backup.volumeSnapshotLocation               | Used by the [oadp-hdr-app-backup](./resources/policies/oadp-hdr-app-backup.yaml) policy, when the [pv-snap](./input/pv-snap/hdr-app-configmap.yaml) is used.
 backup.schedule                             | Used by the [oadp-hdr-app-backup](./resources/policies/oadp-hdr-app-backup.yaml) policy. Defines the cron schedule for creating backups.
 backup.ttl                                  | Used by the [oadp-hdr-app-backup](./resources/policies/oadp-hdr-app-backup.yaml) policy. Defines the expiration time for the backups.
 backup.nsToBackup                           | Used by the [oadp-hdr-app-backup](./resources/policies/oadp-hdr-app-backup.yaml) policy. Defines the list of namespaces to backup. It backs up all resources from these namespaces, including the PV and PVC used by the applications running in these namespaces.
+restore.backupName                          | Used by the [oadp-hdr-app-restore](./resources/policies/oadp-hdr-app-restore.yaml) policy. Sets the name of the backup to restore from, for example `acm-app-<volumeSnapshotLocation>-managed-cls-name-20230309143503`.
+restore.nsToRestore                         | Used by the [oadp-hdr-app-restore](./resources/policies/oadp-hdr-app-restore.yaml) policy. Defines the list of namespaces to restore from the backup file.
 restore.restorePVs                          | Used by the [oadp-hdr-app-restore](./resources/policies/oadp-hdr-app-restore.yaml) policy. Set to `true` if the bacup to restore had used `backup.snapshotVolumes:true`, should be set to `false` otherwise.
 restore.storage.config.name                 | Used by the [oadp-hdr-app-restore](./resources/policies/oadp-hdr-app-restore.yaml) policy. Restore storage config map resource name [class mapping](https://velero.io/docs/main/restore-reference/#changing-pvpvc-storage-classes), used when the source cluster has a different storage class than the restore cluster. You can optionally change the default value `storage-class-acm-app`. 
 restore.mappings                            | Used by the [oadp-hdr-app-restore](./resources/policies/oadp-hdr-app-restore.yaml) policy and in conjunction with the  `restore.storage.config.name`. Defines the data for the storage config map resource name. 
 
+
 ## Scenario
+
 The Policies available here provide backup and restore support for stateful applications running on  managed clusters or hub. Velero is used to backup and restore applications data. The product is installed using the OADP operator, which the [oadp-hdr-app-install](./resources/policies/oadp-hdr-app-install.yaml) policy installs and configure on each target cluster.
 
-You can use these policies to backup stateful applications (policies under [oadp-hdr-app-backup-set](./resources/policy-sets/acm-app-backup-policy-set.yaml) PolicySet) or to restore applications backups (policies under [oadp-hdr-app-restore-set](./resources/policy-sets/acm-app-restore-policy-set.yaml) PolicySet).
+To backup an application:
+- On the hub, apply the [install policy](./resources/policies/oadp-hdr-app-install.yaml) to install OADP and the [backup policy](./resources/policies/oadp-hdr-app-backup.yaml) to create the backup. 
+- On the hub, apply the policies placements, [install placement](./resources/placements/oadp-hdr-app-install-placement.yaml) and [backup placement](./resources/placements/oadp-hdr-app-backup-placement.yaml). Note that the placements use the `acm-pv-dr` label to match the managed clusters. If you plan to have multiple configurations to backup your applications then make sure you update the placement to match the subset of clusters for each configuration types. If you keep the default placement, these policies will be applied on all managed clusters with the `acm-pv-dr` in [`install`, `backup`] and could endup in backup or install policies coliding on those clusters.
+- Apply the [hdr-app-configmap](./input/) and update the `backup.nsToBackup` property with the list of application namespaces to backup.
 
-The PolicySet is used to place the backup or restore policies on managed clusters.
-
-The policies should be installed on the hub managing clusters where you want to create stateful applications backups, or the hub managing clusters where you plan to restore the application backups. 
-
-Both backup and restore policies can be installed on the same hub, if this hub manages clusters where applications need to be backed up or restored. 
-
-A managed cluster can be a backup target if the PlacementRule for the [oadp-hdr-app-backup-set](./resources/policy-sets/acm-app-backup-policy-set.yaml) PolicySet includes this managed cluster.
-
-A managed cluster can be a restore target if the PlacementRule for the [oadp-hdr-app-restore-set](./resources/policy-sets/acm-app-restore-policy-set.yaml) PolicySet includes this managed cluster. 
-
-A managed cluster can be both a backup and restore target, if the PlacementRule from the backup and restore PolicySets matches this cluster.
-
+To restore an application backup:
+- On the hub, apply the [install policy](./resources/policies/oadp-hdr-app-install.yaml) to install OADP and the [restore policy](./resources/policies/oadp-hdr-app-backup.yaml) to restore the backup. 
+- On the hub, apply the policies placements, [install placement](./resources/placements/oadp-hdr-app-install-placement.yaml) and [restore placement](./resources/placements/oadp-hdr-app-restore-placement.yaml). Note that the placements use the `acm-pv-dr` label to match the managed clusters. If you plan to have multiple configurations to restore your application then make sure you update the placement to match the subset of clusters for each configuration types. If you keep the default placement, these policies will be applied on all managed clusters with the `acm-pv-dr` in [`install`, `restore`] and could endup in backup or install policies coliding on those clusters. 
+- Apply the [hdr-app-configmap](./input/) and update the `restore.backupName` withe backup name and `restore.nsToRestore` with the list of application namespaces to restore from that backup.
        
-
-<b>Note</b>:
-
-- The `dpa.spec` property defines the storage location properties. The default value shows the `dpa.spec` format for using an S3 bucket. Update this to match the type of storage location you want to use.
-- You can still upate the `hdr-app-configmap` properties after the `ConfigMap` was applied to the hub. When you do that, the backup settings on the managed clusters where the PolicySet has been applied will be automatically updated with the new values for the `hdr-app-configmap`.
-
 
 ## Apply policies on the hub
 
-Run `oc apply -k ./policy/resources` to apply the backup and restore Policies and PolicySets on the hub. 
+On the hub run `oc apply -k ./policy/resources` to apply the backup and restore Policies. 
 
 The policies use the [configmaps](./input/) to configure the backup setup so you have to create a ConfigMap resource named `hdr-app-configmap` in the same namespace where the policies were applied on the hub.
 
@@ -107,141 +87,30 @@ PV Snapshot usage limitations:
 - PV backup is storage/platform specific; you need the same storage class usage on both source ( where you backup the PV and take the snapshots) and on target cluster ( where you restore the PV snapshot )
 
 
-## Create multiple backup configurations
+### Create multiple backup configurations
 
-To create multiple backup configurations you need to update the `PolicySet` placement rule 
-
-To create multiple backup configurations you want to deploy the `PolicySet` on separate namespaces on the hub. 
-In each namespace update the `PolicySet` placement binding to match the set of managed clusters you want to place the policies on. 
-For example, if you want to have a backup for `pacman` on `cluster1` and a backup for `pacman` and `busybox` on `cluster2`:
--  Create two namespaces and apply the `hdr-app-configmap` ConfigMap and Policies to both; before applying the `hdr-app-configmap`, update the ConfigMap properties to match the options for that cluster.
-- Update the `acm-app-backup-placement` rule on first namespace to match `cluster1` and the rule on second namespace to match `cluster2`.
-- Apply the policies on both namespaces.
-
-```
-oc create ns pacman-policy
-oc project pacman-policy
-oc apply -k ./policy/resources
-```
-
-```
-oc create ns pac-bbox-policy
-oc project pac-bbox-policy
-oc apply -k ./policy/resources
-```
-
-#### Backup PolicySet
+To create multiple backup configurations you want to deploy the install and backup policies on separate namespaces on the hub. 
 
 For example, if you need to backup `pacman` application running on `managed-1`, `managed-2` clusters and want to backup `mysql` on `managed-3`, you can apply the backup policy set and use 2 different namespaces:
 
 1. For the `pacman` app:
-- update the  `hdr-app-configmap` and set `backup.nsToBackup: "[\"pacman-ns\"]"`
-- update the `acm-app-backup-placement` PlacementRule under `acm-app-backup-policy-set.yaml` to match the `managed-1`, `managed-2` clusters (or add the `acm-pv-dr=backup` label to the clusters).
-- create `dr-app-pacman-ns` ( or use your own preferred ns ) - where the backup policy for pacman app will be created on the hub
-- create the policies under that ns 
 
-`oc project dr-app-pacman-ns`
+- update the  `hdr-app-configmap` and set `backup.nsToBackup: "[\"pacman-ns\"]"`
+- update the [oadp-hdr-app-install-placement](./resources/placements/oadp-hdr-app-install-placement.yaml) and [oadp-hdr-app-backup-placement](./resources/placements/oadp-hdr-app-backup-placement.yaml) PlacementRules to match the `managed-1`, `managed-2` clusters.
+- on the hub, create the `pacman-policy-ns` namespace and apply the install and backup policies and the placement rules.
+
+`oc project pacman-policy-ns`
 `oc apply -k ./policy/resources`
 
 
 1. For the `mysql` app:
+
 - update the  `hdr-app-configmap` and set `backup.nsToBackup: "[\"mysql-ns\"]"`
-- update the `acm-app-backup-placement` PlacementRule under `acm-app-backup-policy-set.yaml` to match the `managed-3` cluster (or add the `acm-pv-dr=backup` label to the cluster).
-- create `dr-app-mysql-ns` ( or use your own preferred ns, with no backup policy applied ) - where the backup policy for mysql app will be created on the hub
-- create the policies under that ns 
+- update the [oadp-hdr-app-install-placement](./resources/placements/oadp-hdr-app-install-placement.yaml) and [oadp-hdr-app-backup-placement](./resources/placements/oadp-hdr-app-backup-placement.yaml) PlacementRules to match the `managed-3` cluster.
+- on the hub, create the `mysql-policy-ns` namespace and apply the install and backup policies and the placement rules. 
 
-`oc project dr-app-mysql-ns`
+`oc project mysql-policy-ns`
 `oc apply -k ./policy/resources`
-
-
-
-#### Restore PolicySet
-
-To restore a backup on `managed-4` cluster, add the `acm-app-restore=<backup_name>` label to the `managed-4` cluster.
-The `acm-app-restore` label is going to place the restore policy on `managed-4` cluster and restore the <backup_name> passed as a value for the restore label. 
-
-<b>Important:</b>
-- Since the `acm-app-restore` results in this policy to be applied to any cluster with this label, you may update the `acm-app-restore-placement` rule and add a second matching rule to match only `managed-4` cluster. In this way this restore policy targets only `managed-4`. 
-- Alternatively, you may want to remove the `acm-app-restore` label from the managed cluster after the restore is completed. This will clean up the OADP operator installation though on the managed cluster, if the OADP operator was not available on the cluster at the time of the restore and it was installed by this policy.
-
-If you need to restore `pacman` application running on `managed-4` cluster and want to restore `mysql` on `managed-5`, you can apply the restore policy set and use 2 different namespaces:
-
-1. To restore a backup on `managed-4` cluster:
-- add the `acm-app-restore=<backup_name>` label to the `managed-4` cluster.
-- update `acm-app-restore-placement` rule to match `managed-4` cluster only.
-
-
-
-### Install policy 
-
-
-The `oadp-hdr-app-install` policy is used to install OADP and configure the connection to the storage location.
-
-This policy is created on the hub managing clusters where you want to create stateful applications backups, or where you restore these backup.  
-The policy is set to enforce.
-
-Make sure the `hdr-app-configmap`'s storage settings are properly set before applying this policy.
-
-The  `oadp-hdr-app-install` installs velero and configures the connection to the storage. It also informs on any runtime or configuration error.
-
-
-## Backup applications
-
-If the hub manages clusters where stateful applications are running, and you want to create backups for these applications, then on the hub you must use the `oadp-hdr-app-backup-set` policySet.
-
-If the managed cluster (or hub) matches the PlacementRule for the `oadp-hdr-app-backup-set` policySet, then the oadp-hdr-app-backup policy is propagated to this cluster for an application backup schedule and the cluster produces application backups. Read [Backup PolicySet](#backup-policyset) for more details on how this works.
-
-
-Make sure the `hdr-app-configmap`'s backup schedule resource settings are properly set before applying this policy.
-
-This policy is enforced by default.
-
-The  policy also informs on any backup configuration error.
-
-This policy creates a velero schedule to all managed clusters that match the PlacementRule for the `oadp-hdr-app-backup-set` policySet.
-
-The schedule is used to backup applications resources and PVs. The name of the schedule is `acm-pv-<pv-storage-region>-<cls-name>`
-The schedule uses the `backup.nsToBackup` `hdr-app-configmap` property to specify the namespaces for the applications to backup. 
-
-### Backup pre and post hooks 
-
-If you want to prepare the application before running the backup, you can use the following annotations on a pod to make [Velero execute a backup hook](https://velero.io/docs/v1.9/backup-hooks/) when backing up the pod:
-
-`pre.hook.backup.velero.io/container`
-`pre.hook.backup.velero.io/command`
-
-
-## Restore applications
-
-
-If the hub manages clusters where stateful applications backups must be restored, then you must install the `oadp-hdr-app-backup-set` policySet.
-
-If the managed cluster (or hub) has the `acm-app-restore=<backup-name>` label then the oadp-hdr-app-restore policy is propagated to this cluster for a restore operation. Read [Restore PolicySet](#restore-policyset) for more details on how this works.
-
-This cluster restores applications backup.
-
-Make sure the `hdr-app-configmap`'s restore resource settings are properly set before applying this policy.
-
-This policy is enforced by default.
-
-The  policy also informs on any restore configuration error.
-
-This policy creates a velero restore resource to all managed clusters that match the PlacementRule for the `oadp-hdr-app-restore-set` policySet.
-The restore resource is used to restore applications resources and PVs
-from a selected backup.
-
-
-### Restore pre and post hooks 
-
-If you want to run some commands pre and post restore, you can use the following annotations on a pod to make [Velero execute a restore hook](https://velero.io/docs/v1.9/restore-hooks/) when restoring the pod:
-
-
-`init.hook.restore.velero.io/container-image`
-The container image for the init container to be added.
-`init.hook.restore.velero.io/container-name`
-The name for the init container that is being added.
-`init.hook.restore.velero.io/command`
-This is the ENTRYPOINT for the init container being added. This command is not executed within a shell and the container image’s ENTRYPOINT is used if this is not provided.
 
 
 # Usage considerations
@@ -274,22 +143,45 @@ Use the pacman app to test the policies. (You can use 2 separate hubs for the sa
 - place this app on c1
 - play the app, create some users and save the data.
 - verify that you can see the saved data when you launch the pacman again.
-3. On the hub, install the polices above, using the instructions from the readme. See [Backup PolicySet](#backup-policyset) and [Restore PolicySet](#restore-policyset)
+3. On the hub, install the polices above, using the instructions from the [readme](#scenario). 
 
 
 Backup step:<br>
 
 5. On the hub, set the `backup.nsToBackup: "[\"pacman-ns\"]" ` on the `hdr-app-configmap` resource. This will backup all resources from the `pacman-ns`
-6. Place the install and backup policies on c1 : create this label on managed cluster c1 `acm-pv-dr=backup` or update the `acm-app-backup-placement` placement rule of the `acm-app-backup` PolicySet to match cluster c1.
+6. Place the install and backup policies on c1 : create this label on managed cluster c1 `acm-pv-dr=backup` or update the  [oadp-hdr-app-install-placement](./resources/placements/oadp-hdr-app-install-placement.yaml) and [oadp-hdr-app-backup-placement](./resources/placements/oadp-hdr-app-backup-placement.yaml) placement rule to match cluster c1.
 
 
 Restore step:<br>
 
-7. Place the restore policy on c2 : create this label on managed cluster c2 `acm-app-restore=<backup_name>`; use the backup name you want to restore, which is a backup resource created from step 6 
+7. On the hub, set the `restore.backupName: <backup_name>` (`<backup_name>` is a backup resource created from step 6) and  `restore.nsToRestore: "[\"pacman-ns\"]"` on the `hdr-app-configmap` resource. Place the restore policy on c2 : create this label on managed cluster c2 `acm-pv-dr=restore`or update the [oadp-hdr-app-install-placement](./resources/placements/oadp-hdr-app-install-placement.yaml) and [oadp-hdr-app-restore-placement](./resources/placements/oadp-hdr-app-restore-placement.yaml) placement rule to match cluster c2.
 8. You should see the pacman app on c2; launch the pacman app and verify that you see the data saved when running the app on c1.
 
 
-# Example of pre and post backup hooks:
+# Backup and Restore Hooks
+
+## Backup pre and post hooks 
+
+If you want to prepare the application before running the backup, you can use the following annotations on a pod to make [Velero execute a backup hook](https://velero.io/docs/v1.9/backup-hooks/) when backing up the pod:
+
+`pre.hook.backup.velero.io/container`
+`pre.hook.backup.velero.io/command`
+
+
+## Restore pre and post hooks 
+
+If you want to run some commands pre and post restore, you can use the following annotations on a pod to make [Velero execute a restore hook](https://velero.io/docs/v1.9/restore-hooks/) when restoring the pod:
+
+
+`init.hook.restore.velero.io/container-image`
+The container image for the init container to be added.
+`init.hook.restore.velero.io/container-name`
+The name for the init container that is being added.
+`init.hook.restore.velero.io/command`
+This is the ENTRYPOINT for the init container being added. This command is not executed within a shell and the container image’s ENTRYPOINT is used if this is not provided.
+
+
+## Example of pre and post backup hooks:
 
 ```yaml
 apiVersion: apps/v1
