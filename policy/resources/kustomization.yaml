@@ -1,6 +1,7 @@
 resources:
-- policy-sets/acm-app-backup-policy-set.yaml
-- policy-sets/acm-app-restore-policy-set.yaml
+- placements/oadp-hdr-app-install-placement.yaml
+- placements/oadp-hdr-app-backup-placement.yaml
+- placements/oadp-hdr-app-restore-placement.yaml
 - policies/oadp-hdr-app-install.yaml
 - policies/oadp-hdr-app-backup.yaml
 - policies/oadp-hdr-app-restore.yaml

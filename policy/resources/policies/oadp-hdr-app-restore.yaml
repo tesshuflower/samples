@@ -60,14 +60,15 @@ spec:
                 apiVersion: velero.io/v1
                 kind: Restore
                 metadata:
-                  name: 'restore-{{ fromClusterClaim "acm-app-restore" }}'
+                  name: 'restore-{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                   labels:
                     cluster-id: '{{ fromClusterClaim "id.openshift.io" }}'
                     cluster-name: '{{ fromClusterClaim "name" }}'
                 spec:
                   existingResourcePolicy: update
-                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'
+                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'
+                  includedNamespaces: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.nsToRestore" | toLiteral hub}}'
                   restorePVs: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.restorePVs" | toBool hub}}'            
           remediationAction: enforce
           severity: high
@@ -85,7 +86,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
+                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
                 status:
                   phase: Failed                                                            
           remediationAction: inform
@@ -104,7 +105,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
+                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
                 status:
                   phase: PartiallyFailed                                                            
           remediationAction: inform
@@ -123,7 +124,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
+                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
                 status:
                   phase: FailedValidation                                                            
           remediationAction: inform
@@ -142,7 +143,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
+                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
                 status:
                   phase: InProgress                                                            
           remediationAction: inform
@@ -161,7 +162,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
+                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
                 status:
                   phase: ''                                                            
           remediationAction: inform
@@ -180,7 +181,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
+                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
                 status:
                   phase: Completed                                                            
           remediationAction: inform
