@@ -96,6 +96,7 @@ data:
 ####################################
   backup.snapshotVolumes: "false"
   backup.defaultVolumesToRestic: "true"
+  backup.volumeSnapshotLocation: 'restic'
 ######################################
 ###### end backup schedule resource ###
 
