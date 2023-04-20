@@ -1,6 +1,6 @@
 #
-# This configmap is used by the oadp-hdr-app-install and oadp-hdr-app-backup policies 
-# and specifies the configuration required to install velero and create backups 
+# This configmap is used by the all tree policies
+# and specifies the configuration required to install velero, backup or restore
 #
 # This config is set to use restic for backing up PVs 
 # https://velero.io/docs/v1.9/restic/
@@ -14,6 +14,10 @@ kind: ConfigMap
 metadata:
   name: hdr-app-configmap
 data:
+
+  ###### Configuration for the oadp-hdr-install policy ###
+  ########################################################
+
   # backupNS is the ns where velero/oadp is installed on the cluster
   backupNS: acm-app-backup 
   channel: stable-1.1
@@ -87,42 +91,37 @@ data:
   }
 }"
 ## END DPA ##
+###### End Configuration for the oadp-hdr-install policy ###
+###########################################################
 
-   # the name prefix for the resource to backup
+### Configuration for the oadp-hdr-backup policy
+################################################
+  # the name prefix for the resource to backup
   backup.prefix: acm-restic
 
-
-###### backup schedule resource ###
-####################################
   backup.snapshotVolumes: "false"
   backup.defaultVolumesToRestic: "true"
-  backup.volumeSnapshotLocation: 'restic'
-######################################
-###### end backup schedule resource ###
+  backup.volumeSnapshotLocation: restic
+###### End Configuration for the oadp-hdr-backup policy ###
+###########################################################
 
-###### restore resource ###
+###### Configuration for the oadp-hdr-restore policy ###
 ####################################
-  restore.restorePVs: "false"
-######################################
-###### end backup schedule resource ###
-
-###### backup schedule resource ###
-####################################
-  backup.schedule: 0 */1 * * *
-  backup.ttl: 240h0m0s
-
-  # list here all applications namespaces you want to backup
-  # for example backup.nsToBackup: "[\"pacman-ns\", \"helloworld-pv-ns\"]"
-  backup.nsToBackup: "[\"app1-ns\", \"app2-ns\", \"app3-ns\"]" 
-######################################
-###### end backup schedule resource ###
+  # the name of the backup to restore from
+  # for example backupName: acm-pv-schedule-vb-managed-cls-1-20230208150010
+  restore.backupName: <backup-name>
+  # list here all apps ns you want to restore from the specified backup
+  # for example backup.nsToBackup: "[\"pacman-ns\"]"
+  restore.nsToRestore: "[\"app1-ns\", \"app2-ns\"]"
 
 ## restore storage class mapping ##
   restore.storage.config.name: storage-class-acm-app
   restore.storage.config.mappings: "{
           \"managed-csi\": \"thin\",
     }"
-##################################
+###### End Configuration for the oadp-hdr-restore policy ###
+###########################################################
+
 
 
 
