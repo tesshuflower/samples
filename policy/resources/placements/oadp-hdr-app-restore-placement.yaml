@@ -16,10 +16,8 @@ spec:
   clusterConditions: []
   clusterSelector:
     matchExpressions:
-      - key: acm-pv-dr
-        operator: In
-        values:
-          - restore
+      - key: acm-app-restore
+        operator: Exists
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
