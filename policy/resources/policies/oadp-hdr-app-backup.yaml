@@ -48,6 +48,7 @@ spec:
                 spec:
                   schedule: '{{hub fromConfigMap "" "hdr-app-configmap" "backup.schedule" hub}}' 
                   template:
+                    excludedResources: '{{hub fromConfigMap "" "hdr-app-configmap" "backup.excludedResources" | toLiteral hub}}'
                     volumeSnapshotLocations:
                       - '{{hub fromConfigMap "" "hdr-app-configmap" "backup.volumeSnapshotLocation" hub}}' 
                     snapshotVolumes: '{{hub fromConfigMap "" "hdr-app-configmap" "backup.snapshotVolumes" | toBool hub}}'
