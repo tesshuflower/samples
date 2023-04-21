@@ -102,6 +102,13 @@ data:
   backup.snapshotVolumes: "false"
   backup.defaultVolumesToRestic: "true"
   backup.volumeSnapshotLocation: restic
+
+  backup.schedule: 0 */1 * * *
+  backup.ttl: 240h0m0s
+
+  # list here all applications namespaces you want to backup
+  # for example backup.nsToBackup: "[\"pacman-ns\", \"helloworld-pv-ns\"]"
+  backup.nsToBackup: "[\"app1-ns\", \"app2-ns\", \"app3-ns\"]" 
 ###### End Configuration for the oadp-hdr-backup policy ###
 ###########################################################
 
