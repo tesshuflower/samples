@@ -1,5 +1,6 @@
 resources:
-- placements/oadp-hdr-app-install-placement.yaml
+- placements/oadp-hdr-app-install-backup-placement.yaml
+- placements/oadp-hdr-app-install-restore-placement.yaml
 - placements/oadp-hdr-app-backup-placement.yaml
 - placements/oadp-hdr-app-restore-placement.yaml
 - policies/oadp-hdr-app-install.yaml

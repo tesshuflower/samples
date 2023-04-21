@@ -60,15 +60,15 @@ spec:
                 apiVersion: velero.io/v1
                 kind: Restore
                 metadata:
-                  name: 'restore-{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'
+                  name: 'restore-{{ fromClusterClaim "acm-app-restore" }}'
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                   labels:
                     cluster-id: '{{ fromClusterClaim "id.openshift.io" }}'
                     cluster-name: '{{ fromClusterClaim "name" }}'
                 spec:
                   existingResourcePolicy: update
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'
-                  includedNamespaces: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.nsToRestore" | toLiteral hub}}'
+                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'
+                  excludedNamespaces: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.nsToExcludeFromRestore" | toLiteral hub}}'
                   restorePVs: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.restorePVs" | toBool hub}}'            
           remediationAction: enforce
           severity: high
@@ -86,7 +86,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
+                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
                 status:
                   phase: Failed                                                            
           remediationAction: inform
@@ -105,7 +105,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
+                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
                 status:
                   phase: PartiallyFailed                                                            
           remediationAction: inform
@@ -124,7 +124,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
+                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
                 status:
                   phase: FailedValidation                                                            
           remediationAction: inform
@@ -143,7 +143,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
+                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
                 status:
                   phase: InProgress                                                            
           remediationAction: inform
@@ -162,7 +162,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
+                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
                 status:
                   phase: ''                                                            
           remediationAction: inform
@@ -181,7 +181,7 @@ spec:
                 metadata:
                   namespace: '{{hub fromConfigMap "" "hdr-app-configmap" "backupNS" hub}}'
                 spec:
-                  backupName: '{{hub fromConfigMap "" "hdr-app-configmap" "restore.backupName" hub}}'  
+                  backupName: '{{ fromClusterClaim "acm-app-restore" }}'  
                 status:
                   phase: Completed                                                            
           remediationAction: inform

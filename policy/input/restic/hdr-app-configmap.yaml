@@ -107,12 +107,10 @@ data:
 
 ###### Configuration for the oadp-hdr-restore policy ###
 ####################################
-  # the name of the backup to restore from
-  # for example backupName: acm-pv-schedule-vb-managed-cls-1-20230208150010
-  restore.backupName: <backup-name>
-  # list here all apps ns you want to restore from the specified backup
-  # for example backup.nsToBackup: "[\"pacman-ns\"]"
-  restore.nsToRestore: "[\"app1-ns\", \"app2-ns\"]"
+  # list here all apps ns you do now want to restore from the specified backup
+  # if empty, all namespaces in thi backup are restored
+  # for example backup.nsToBackup: "[\"box-ns\"]"
+  restore.nsToExcludeFromRestore: "[]"
 
 ## restore storage class mapping ##
   restore.storage.config.name: storage-class-acm-app

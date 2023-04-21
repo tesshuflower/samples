@@ -1,3 +1,4 @@
+# Used by the restore policy
 # Update the clusterSelector to match ONLY the clusters set/rules where you want to install OADP
 # as defined by the hdr-app-configmap configuration.
 # For example, to install OADP on all clusters with label environment=prod use this matchExpressions:
@@ -11,23 +12,20 @@
 apiVersion: apps.open-cluster-management.io/v1
 kind: PlacementRule
 metadata:
-  name: oadp-hdr-app-install-placement
+  name: oadp-hdr-app-install-restore-placement
 spec:
   clusterConditions: []
   clusterSelector:
     matchExpressions:
-      - key: acm-pv-dr
-        operator: In
-        values:
-          - backup
-          - restore
+      - key: acm-app-restore
+        operator: Exists
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
 metadata:
-  name: oadp-hdr-app-install-placement-binding
+  name: oadp-hdr-app-install-restore-placement-binding
 placementRef:
-  name: oadp-hdr-app-install-placement
+  name: oadp-hdr-app-install-restore-placement
   apiGroup: apps.open-cluster-management.io
   kind: PlacementRule
 subjects:
