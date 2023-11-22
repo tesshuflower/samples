@@ -179,19 +179,49 @@ spec:
                 {{- if eq $pvc.status.phase "Bound" }}
                   {{- /* Use the volsync-config-pvcns-pvcname config instead of the default volsync-config map, if such map exists under the $ns */ -}}
                   {{- $pvc_config_name := ( (cat $volsync_map "-" $pvc.metadata.namespace "-" $pvc.metadata.name ) | replace " " "" ) }}
+
+                  {{- $pvc_config_info_name := ( (cat $volsync_map "-info-" $pvc.metadata.name ) | replace " " "" ) }}
+
+                  - complianceType: musthave
+                    objectDefinition:
+                      apiVersion: v1
+                      kind: ConfigMap
+                      metadata:
+                        name: {{ $pvc_config_info_name }}
+                        namespace: {{ $pvc.metadata.namespace }}
+                        labels:
+                          cluster.open-cluster-management.io/backup: volsync
+                      data:
+                        {{- if not ( eq  $pvc.spec.storageClassName "") }}
+                        storageClassName: {{ $pvc.spec.storageClassName }}
+                        {{- end }}
+                        {{- if not ( eq  $pvc.spec.volumeMode "") }}
+                        volumeMode: {{ $pvc.spec.volumeMode }}
+                        {{- end }}
+                        {{- if not ( eq  $pvc.spec.resources.requests.storage "") }}
+                        resources.requests.storage: {{ $pvc.spec.resources.requests.storage }}
+                        {{- end }}                        
+                        {{- if not (empty $pvc.spec.accessModes ) }}
+                          {{ $am_val := ""}}
+                          {{- range $av := $pvc.spec.accessModes }}
+                             {{ $am_val =  cat $am_val $av }}
+                          {{- end }}
+                        resources.accessModes: {{ $am_val }}
+                        {{- end }}                        
+
                   {{ if eq ( lookup "v1" "ConfigMap" $ns $pvc_config_name ).metadata.name  $pvc_config_name }}   
                     {{ $volsync_map = $pvc_config_name }}
                   {{- end }}   
 
                   {{- $volsync_pvcs_str = ( (cat $volsync_pvcs_str "##" $pvc.metadata.namespace "#" $pvc.metadata.name ) | replace " " "" ) }}
-                  
                   {{- $common_restic_repo := ( lookup "v1" "Secret" $ns $volsync_secret ).data.RESTIC_REPOSITORY_COMMON | base64dec }}
+                  {{- $secretName := ( (cat $pvc.metadata.name "-"  (fromConfigMap $ns $volsync_map "repository") ) | replace " " "" ) }}
                   - complianceType: musthave
                     objectDefinition:
                       apiVersion: v1
                       kind: Secret
                       metadata:
-                        name: '{{ fromConfigMap $ns $volsync_map "repository" }}'
+                        name: '{{ $secretName }}'
                         namespace: {{ $pvc.metadata.namespace }}
                         labels:
                           cluster.open-cluster-management.io/backup: volsync
@@ -202,7 +232,7 @@ spec:
                       apiVersion: v1
                       kind: Secret
                       metadata:
-                        name: '{{ fromConfigMap $ns $volsync_map "repository" }}'
+                        name: '{{ $secretName }}'
                         namespace: {{ $pvc.metadata.namespace }}
                       data:
                         RESTIC_REPOSITORY: {{ ( ( (cat $common_restic_repo "/" $pvc.metadata.namespace "-" $pvc.metadata.name ) | replace " " "" ) | base64enc ) }}                     
@@ -219,7 +249,7 @@ spec:
                           cacheCapacity: '{{ fromConfigMap $ns $volsync_map "cacheCapacity" }}'
                           copyMethod: '{{ fromConfigMap $ns $volsync_map "copyMethod" }}'
                           pruneIntervalDays: '{{ fromConfigMap $ns $volsync_map "pruneIntervalDays" | toInt }}'
-                          repository: '{{ fromConfigMap $ns $volsync_map "repository" }}'
+                          repository: '{{ $secretName }}'
                           retain:
                             daily: '{{ fromConfigMap $ns $volsync_map "retain_daily" | toInt }}'
                             hourly: '{{ fromConfigMap $ns $volsync_map "retain_hourly" | toInt }}'
@@ -346,6 +376,28 @@ spec:
                     {{- end }}  
                     {{- $restore_timestamp_trim := trimAll $backup_name_prefix $backup_name  }}
                     {{- $secret_name := fromConfigMap $ns $volsync_map "repository" }}
+                    {{- $pvc_config_info_name := ( (cat $volsync_map "-info-" $pvc_name ) | replace " " "" ) }}
+
+                    - complianceType: musthave
+                      objectDefinition:
+                        kind: PersistentVolumeClaim
+                        apiVersion: v1
+                        metadata:
+                          name: {{ $pvc_name }}
+                          namespace: {{ $pvc_namespace }}
+                        spec:
+                          resources:
+                            requests:
+                              storage: '{{ fromConfigMap $pvc_namespace $pvc_config_info_name "resources.requests.storage" }}'
+                          volumeMode: '{{ fromConfigMap $pvc_namespace $pvc_config_info_name "volumeMode" }}'    
+                          {{ $accessModes := trimAll " " (fromConfigMap $pvc_namespace $pvc_config_info_name "resources.accessModes") }}                  
+                          {{- if not (eq $accessModes "" ) }}
+                          accessModes:
+                            {{- range $modes := split " " $accessModes }} 
+                            - {{ $modes }}
+                            {{- end }}
+                          {{- end }}  
+                   {{- $secretName := ( (cat $pvc_name "-"  (fromConfigMap $ns $volsync_map "repository") ) | replace " " "" ) }}
 
                     - complianceType: musthave
                       objectDefinition:
@@ -359,15 +411,11 @@ spec:
                             "backup-name": {{ $backup_name }}
                         spec:
                           restic:
-                            accessModes:
-                              - ReadWriteOnce
-                            cacheCapacity: {{ fromConfigMap $ns $volsync_map "cacheCapacity" }}
-                            capacity: 8Gi
-                            copyMethod: Snapshot
-                            repository: {{ fromConfigMap $ns $volsync_map "repository" }}
+                            repository: {{ $secretName }} 
+                            destinationPVC: {{ $pvc_name }}
+                            copyMethod: Direct
                           trigger:
                             manual: restore-once
-                  
                  {{- end }}   
               {{- end }}
             {{- end }}
@@ -419,17 +467,49 @@ spec:
                     status:
                       latestMoverStatus:
                         result: Successful
-                - complianceType: musthave
-                  objectDefinition:
-                    apiVersion: snapshot.storage.k8s.io/v1
-                    kind: VolumeSnapshot
-                    metadata:
-                      namespace: {{ $rd.metadata.namespace }}
-                      ownerReferences:
-                        - kind: ReplicationDestination
-                          name: {{ $rd.metadata.name }} 
-                    status:
-                      readyToUse: true
+              {{- end }}
+            {{- end }}
+          remediationAction: inform
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: validate-pv-snapshot-status 
+        spec:
+          object-templates-raw: |
+            {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
+            {{- $api := "cluster.open-cluster-management.io/v1beta1" }}
+            {{- $velero_api := "velero.io/v1" }}
+            {{- $kind_schedule := "Schedule" }}
+            {{- $ns := "open-cluster-management-backup" }}
+            {{- $kind_restore := "Restore" }} 
+            {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (resources)"}}
+            {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0 }}
+            {{- $volsync_restore_cond :=  gt (len ( lookup $api $kind_restore $ns "").items ) 0 }}
+            
+            {{- $volsync_pvcs := "volsync-config-pvcs" }}
+            {{- $backup_name := (index ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "velero.io/backup-name").metadata.labels "velero.io/backup-name") }}
+            {{- $backup_name_prefix :=  "acm-credentials-schedule" }}            
+            {{- $backup_timestamp := trimAll $backup_name_prefix $backup_name  }}
+
+            {{- /* The PVSnapshot for the ReplicationDestination must be ready to use */ -}}
+            {{ if and ($volsync_restore_cond) ( not $volsync_backup_cond ) }}
+              {{- range $rd := (lookup "snapshot.storage.k8s.io/v1" "VolumeSnapshot" "" "" "").items }}
+                
+              - complianceType: musthave
+                objectDefinition:
+                  apiVersion: snapshot.storage.k8s.io/v1
+                  kind: VolumeSnapshot
+                  metadata:
+                    namespace: {{ $rd.metadata.namespace }}
+                    ownerReferences:
+                      - kind: ReplicationDestination
+                        name: {{ $rd.metadata.name }}
+                        namespace: {{ $backup_timestamp }}
+                  status:
+                    readyToUse: true
+                     
               {{- end }}
             {{- end }}
           remediationAction: inform
