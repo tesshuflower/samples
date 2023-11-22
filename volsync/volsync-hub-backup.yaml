@@ -1,0 +1,520 @@
+# The volsync-config ConfigMap and secret must be defined under the open-cluster-management-backup ns,  
+# if a BackupSchedule is running and there are PVCs with the volsync label.
+# The volsync ConfigMap is in this format: 
+##
+#kind: ConfigMap
+#apiVersion: v1
+#metadata:
+#  name: volsync-config
+#  namespace: open-cluster-management-backup
+#  labels:
+#    cluster.open-cluster-management.io/backup: volsync
+#data:
+#  cacheCapacity: 2Gi
+#  copyMethod: Snapshot
+#  pruneIntervalDays: '2'
+#  repository: restic-secret
+#  retain_daily: '2'
+#  retain_hourly: '3'
+#  retain_monthly: '1'
+#  trigger_schedule: 0 */2 * * *
+##
+# The ConfigMap values are used by the ReplicationSource resources, as documented here:
+# https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes/2.8/html/business_continuity/business-cont-overview#restic-backup-volsync
+#
+# The secret MUST contain only this value RESTIC_REPOSITORY_COMMON ( RESTIC_REPOSITORY will be generated from this ), pointing to a common folder for all PVCs: 
+#
+#kind: Secret
+#apiVersion: v1
+#metadata:
+#  name: restic-secret
+#  namespace: open-cluster-management-backup
+#  labels:
+#    cluster.open-cluster-management.io/backup: volsync
+#data:
+#  AWS_ACCESS_KEY_ID: a2V5X2lk
+#  AWS_SECRET_ACCESS_KEY: a2V5
+#  RESTIC_PASSWORD: YWJjMTIz
+#  RESTIC_REPOSITORY_COMMON: >-
+#    czM6aHR0cDovL21pbmlvLm1pbmlvLnN2Yy5jbHVzdGVyLmxvY2FsOjkwMDAvbXktYnVja2V0Lw==
+
+#
+# The volsync secret is also defined in the doc above
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: acm-volsync-config
+  annotations:
+    policy.open-cluster-management.io/categories: CA Security Assessment and Authorization
+    policy.open-cluster-management.io/controls: CA-2 Security Assessments, CA-7 Continuous Monitoring
+    policy.open-cluster-management.io/standards: NIST SP 800-53
+spec:
+  disabled: false
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-storage-configmap
+        spec:
+          object-templates-raw: |
+            {{- /* Specify the parameters  */ -}}
+            {{- $api := "cluster.open-cluster-management.io/v1beta1" }}
+            {{- $velero_api := "velero.io/v1" }}
+            {{- $kind_schedule := "Schedule" }}
+            {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (resources)"}}
+            {{- $kind_restore := "Restore" }}
+            {{- $ns := "open-cluster-management-backup" }}   
+            {{- $volsync_secret := "restic-secret" }} 
+            {{- $volsync_map := "volsync-config" }} 
+            {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
+            {{- $pv_claim_cond := gt (len ( lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items ) 0 }}
+            {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0  }}
+            {{- $volsync_restore_cond :=  gt (len ( lookup $api $kind_restore $ns "").items ) 0 }}
+
+            {{- /* The volsync-config ConfigMap and secret must be defined under the open-cluster-management-backup ns, if a BackupSchedule is running and there are PVCs with the volsync label. */ -}} 
+            {{ if and $pv_claim_cond ( or ($volsync_backup_cond) ($volsync_restore_cond) )}}
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: v1
+                kind: ConfigMap
+                metadata:
+                  name: {{ $volsync_map }}
+                  namespace: {{ $ns }}
+                  labels:
+                    cluster.open-cluster-management.io/backup: volsync
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: v1
+                kind: Secret
+                metadata:
+                  name: {{ $volsync_secret }}
+                  namespace: {{ $ns }}
+                  labels:
+                    cluster.open-cluster-management.io/backup: volsync
+                type: Opaque
+            {{- end }}
+          remediationAction: inform
+          severity: high 
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: create-volsync-addon
+        spec:
+          object-templates-raw: |
+            {{- /* Specify the parameters  */ -}}
+            {{- $api := "cluster.open-cluster-management.io/v1beta1" }}
+            {{- $velero_api := "velero.io/v1" }}
+            {{- $kind_schedule := "Schedule" }}
+            {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (resources)"}}
+            {{- $kind_restore := "Restore" }}
+            {{- $ns := "open-cluster-management-backup" }}   
+            {{- $volsync_secret := "restic-secret" }} 
+            {{- $volsync_map := "volsync-config" }} 
+            {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
+            {{- $pv_claim_cond := gt (len ( lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items ) 0 }}
+            {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0  }}
+            {{- $volsync_restore_cond :=  gt (len ( lookup $api $kind_restore $ns "").items ) 0 }}
+
+            {{- /* Create the volsync addon - if BackupSchedule exists and there are PVCs with volsync label */ -}}
+            {{ if and $pv_claim_cond ( or ($volsync_backup_cond) ($volsync_restore_cond) )}}
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: addon.open-cluster-management.io/v1alpha1
+                    kind: ManagedClusterAddOn
+                    metadata:
+                      name: volsync
+                      namespace: local-cluster
+                      labels:
+                        cluster.open-cluster-management.io/backup: volsync
+                    spec:
+                      installNamespace: open-cluster-management-agent-addon
+            {{- end }}
+          remediationAction: enforce
+          severity: high
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: acm-volsync-source
+  annotations:
+    policy.open-cluster-management.io/categories: CA Security Assessment and Authorization
+    policy.open-cluster-management.io/controls: CA-2 Security Assessments, CA-7 Continuous Monitoring
+    policy.open-cluster-management.io/standards: NIST SP 800-53
+spec:
+  disabled: false
+  dependencies:
+  - apiVersion: policy.open-cluster-management.io/v1
+    compliance: Compliant
+    kind: Policy
+    name: acm-volsync-config
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: create-replication-source
+        spec:
+          object-templates-raw: |
+            {{- /* Specify the parameters  */ -}}
+            {{- $api := "cluster.open-cluster-management.io/v1beta1" }}
+            {{- $velero_api := "velero.io/v1" }}
+            {{- $kind_schedule := "Schedule" }}
+            {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (resources)"}}
+            {{- $ns := "open-cluster-management-backup" }}   
+            {{- $volsync_secret := "restic-secret" }} 
+            {{- $volsync_map := "volsync-config" }} 
+            {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
+            {{- $pv_claim_cond := gt (len ( lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items ) 0 }}
+            {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0  }}
+            {{- $volsync_pvcs := "volsync-config-pvcs" }}
+
+            {{- /* Create the volsync ReplicationSource and secret - if BackupSchedule exists ; delete them otherwise */ -}}
+            {{ if $volsync_backup_cond }}
+
+              {{- range $pvc := (lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items }}
+
+                {{- if eq $pvc.status.phase "Bound" }}
+                  {{- /* Use the volsync-config-pvcns-pvcname config instead of the default volsync-config map, if such map exists under the $ns */ -}}
+                  {{- $pvc_config_name := ( (cat $volsync_map "-" $pvc.metadata.namespace "-" $pvc.metadata.name ) | replace " " "" ) }}
+                  {{ if eq ( lookup "v1" "ConfigMap" $ns $pvc_config_name ).metadata.name  $pvc_config_name }}   
+                    {{ $volsync_map = $pvc_config_name }}
+                  {{- end }}   
+
+                  - complianceType: musthave
+                    objectDefinition:
+                      apiVersion: v1
+                      kind: ConfigMap
+                      metadata:
+                        name: {{ $volsync_pvcs }}
+                        namespace: {{ $ns }}
+                        labels:
+                          cluster.open-cluster-management.io/backup: volsync
+                          app: {{ $volsync_pvcs }}
+                      data:
+                        {{ ( (cat $pvc.metadata.namespace "_" $pvc.metadata.name ) | replace " " "" ) }}: {{ $pvc.metadata.name }}
+                  
+                  {{- $common_restic_repo := ( lookup "v1" "Secret" $ns $volsync_secret ).data.RESTIC_REPOSITORY_COMMON | base64dec }}
+                  - complianceType: musthave
+                    objectDefinition:
+                      apiVersion: v1
+                      kind: Secret
+                      metadata:
+                        name: '{{ fromConfigMap $ns $volsync_map "repository" }}'
+                        namespace: {{ $pvc.metadata.namespace }}
+                        labels:
+                          cluster.open-cluster-management.io/backup: volsync
+                      data: '{{ copySecretData $ns $volsync_secret }}'
+                      type: Opaque
+                  - complianceType: musthave
+                    objectDefinition:
+                      apiVersion: v1
+                      kind: Secret
+                      metadata:
+                        name: '{{ fromConfigMap $ns $volsync_map "repository" }}'
+                        namespace: {{ $pvc.metadata.namespace }}
+                      data:
+                        RESTIC_REPOSITORY: {{ ( ( (cat $common_restic_repo "/" $pvc.metadata.namespace "-" $pvc.metadata.name ) | replace " " "" ) | base64enc ) }}                     
+                      type: Opaque
+                  - complianceType: mustonlyhave
+                    objectDefinition:
+                      kind: ReplicationSource
+                      apiVersion: volsync.backube/v1alpha1
+                      metadata:
+                        name: {{ $pvc.metadata.name }}
+                        namespace: {{ $pvc.metadata.namespace }}
+                      spec:
+                        restic:
+                          cacheCapacity: '{{ fromConfigMap $ns $volsync_map "cacheCapacity" }}'
+                          copyMethod: '{{ fromConfigMap $ns $volsync_map "copyMethod" }}'
+                          pruneIntervalDays: '{{ fromConfigMap $ns $volsync_map "pruneIntervalDays" | toInt }}'
+                          repository: '{{ fromConfigMap $ns $volsync_map "repository" }}'
+                          retain:
+                            daily: '{{ fromConfigMap $ns $volsync_map "retain_daily" | toInt }}'
+                            hourly: '{{ fromConfigMap $ns $volsync_map "retain_hourly" | toInt }}'
+                            monthly: '{{ fromConfigMap $ns $volsync_map "retain_monthly" | toInt }}'
+                        sourcePVC: {{ $pvc.metadata.name }}
+                        trigger:
+                          schedule: '{{ fromConfigMap $ns $volsync_map "trigger_schedule" }}'
+
+                {{- end }}        
+              {{- end }}
+                  
+            {{- else }}
+              {{- range $pvc := (lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items }}  
+                  - complianceType: mustnothave
+                    objectDefinition:
+                      kind: ReplicationSource
+                      apiVersion: volsync.backube/v1alpha1
+                      metadata:
+                        name: {{ $pvc.metadata.name }}
+                        namespace: {{ $pvc.metadata.namespace }}
+                      spec:
+                        sourcePVC: {{ $pvc.metadata.name }}
+              {{- end }}
+            {{- end }}
+          remediationAction: enforce
+          severity: high 
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: validate-source-replication-status 
+        spec:
+          object-templates-raw: |
+            {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
+
+            {{- /* The volsync replication-source should be successful */ -}}
+            {{- range $pvc := (lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items }}
+              - complianceType: mustnothave
+                objectDefinition:
+                  apiVersion: volsync.backube/v1alpha1
+                  kind: ReplicationSource
+                  metadata:
+                    namespace: {{ $pvc.metadata.namespace }}
+                  status:
+                    latestMoverStatus:
+                      result: Failed
+            {{- end }}
+          remediationAction: inform
+          severity: high
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: acm-volsync-destination
+  annotations:
+    policy.open-cluster-management.io/categories: CA Security Assessment and Authorization
+    policy.open-cluster-management.io/controls: CA-2 Security Assessments, CA-7 Continuous Monitoring
+    policy.open-cluster-management.io/standards: NIST SP 800-53
+spec:
+  disabled: false
+  dependencies:
+  - apiVersion: policy.open-cluster-management.io/v1
+    compliance: Compliant
+    kind: Policy
+    name: acm-volsync-config
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: create-replication-destination
+        spec:
+          object-templates-raw: |
+            {{- /* Specify the parameters  */ -}}
+            {{- $api := "cluster.open-cluster-management.io/v1beta1" }}
+            {{- $velero_api := "velero.io/v1" }}
+            {{- $kind_schedule := "Schedule" }}
+            {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (resources)"}}
+            {{- $kind_restore := "Restore" }}
+            {{- $ns := "open-cluster-management-backup" }}   
+            {{- $volsync_secret := "restic-secret" }} 
+
+            {{- /* common volsync config; to define different config for a PVC, create a volsync-config-pvc-ns-pvcname configMap */ -}}
+            {{- $volsync_map := "volsync-config" }} 
+            {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
+
+            {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0 }}
+            {{- $restore_label :=  "velero.io/backup-name" }}  
+            {{- $pvc_restore_label :=  "cluster.open-cluster-management.io/backup, velero.io/backup-name" }}
+            {{- $backup_name_prefix :=  "acm-credentials-schedule-" }}
+            {{- $volsync_pvcs := "volsync-config-pvcs" }}
+            {{- $volsync_restore_cond := eq ( lookup "v1" "ConfigMap" $ns $volsync_pvcs ).metadata.name $volsync_pvcs }}
+
+            {{- /* Create the ReplicationDestination only if the PVC has been created by a velero restore which exists on this hub */ -}}
+
+            {{- /* Create the volsync ReplicationDestination and secret - if Restore exists, PVC is created by a Restore and no Backup is running */ -}}
+            {{- /* Use the volsync-config-pvcns-pvcname config instead of the default volsync-config map, if such map exists under the $ns */ -}}
+
+            {{- $restore_name := (index ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "velero.io/restore-name").metadata.labels "velero.io/restore-name") }}
+            {{- $backup_name := (index ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "velero.io/backup-name").metadata.labels "velero.io/backup-name") }}
+
+            {{ if and ($volsync_restore_cond) ( not $volsync_backup_cond ) }}  
+              {{- range $key, $value := ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "").data }}
+
+                {{- $pvc_name := $value }}
+                {{- $pvc_namespace := replace ( (cat "_" $value ) | replace " " "" ) "" $key }}
+
+                {{ if eq ( lookup $velero_api $kind_restore $ns $restore_name ).metadata.name  $restore_name }}
+
+                    {{- $pvc_config_name := ( (cat $volsync_map "-" $pvc_namespace "-" $pvc_name ) | replace " " "" ) }}
+                    {{ if eq ( lookup "v1" "ConfigMap" $ns $pvc_config_name ).metadata.name  $pvc_config_name }}   
+                      {{ $volsync_map = $pvc_config_name }}
+                    {{- end }}  
+                    {{- $restore_timestamp_trim := trimAll $backup_name_prefix $backup_name  }}
+                    {{- $secret_name := fromConfigMap $ns $volsync_map "repository" }}
+
+                    - complianceType: musthave
+                      objectDefinition:
+                        kind: ReplicationDestination
+                        apiVersion: volsync.backube/v1alpha1
+                        metadata:
+                          name: {{ $pvc_name }}-{{ $restore_timestamp_trim }}
+                          namespace: {{ $pvc_namespace }}
+                          labels:
+                            "restore-name": {{ $restore_name }}
+                            "backup-name": {{ $backup_name }}
+                        spec:
+                          restic:
+                            accessModes:
+                              - ReadWriteOnce
+                            cacheCapacity: {{ fromConfigMap $ns $volsync_map "cacheCapacity" }}
+                            capacity: 8Gi
+                            copyMethod: Snapshot
+                            repository: {{ fromConfigMap $ns $volsync_map "repository" }}
+                          trigger:
+                            manual: restore-once
+                 {{- end }}      
+              {{- end }}
+            {{- end }}
+          remediationAction: enforce
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: validate-destination-replication-status 
+        spec:
+          object-templates-raw: |
+            {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
+            {{- $api := "cluster.open-cluster-management.io/v1beta1" }}
+            {{- $velero_api := "velero.io/v1" }}
+            {{- $kind_schedule := "Schedule" }}
+            {{- $ns := "open-cluster-management-backup" }}
+            {{- $kind_restore := "Restore" }} 
+            {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (resources)"}}
+            {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0 }}
+            {{- $volsync_restore_cond :=  gt (len ( lookup $api $kind_restore $ns "").items ) 0 }}
+            
+            {{- $volsync_pvcs := "volsync-config-pvcs" }}
+            {{- $backup_name := (index ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "velero.io/backup-name").metadata.labels "velero.io/backup-name") }}
+
+            {{- /* The volsync destination-source should be successful */ -}}
+            {{ if and ($volsync_restore_cond) ( not $volsync_backup_cond ) }}
+              {{- range $rd := (lookup "volsync.backube/v1alpha1" "ReplicationDestination" "" "" "backup-name").items }}
+                - complianceType: mustnothave
+                  objectDefinition:
+                    apiVersion: volsync.backube/v1alpha1
+                    kind: ReplicationDestination
+                    metadata:
+                      namespace: {{ $rd.metadata.namespace }}
+                      labels:
+                        backup-name: {{ $backup_name }}
+                    status:
+                      conditions:
+                        - reason: Error
+                          type: Synchronizing
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: volsync.backube/v1alpha1
+                    kind: ReplicationDestination
+                    metadata:
+                      namespace: {{ $rd.metadata.namespace }}
+                      labels:
+                        backup-name: {{ $backup_name }}
+                    status:
+                      latestMoverStatus:
+                        result: Successful
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: snapshot.storage.k8s.io/v1
+                    kind: VolumeSnapshot
+                    metadata:
+                      namespace: {{ $rd.metadata.namespace }}
+                      ownerReferences:
+                        - kind: ReplicationDestination
+                          name: {{ $rd.metadata.name }} 
+                    status:
+                      readyToUse: true
+              {{- end }}
+            {{- end }}
+          remediationAction: inform
+          severity: high 
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: validate-pvc-status 
+        spec:
+          object-templates-raw: |
+            {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
+            {{- $api := "cluster.open-cluster-management.io/v1beta1" }}
+            {{- $velero_api := "velero.io/v1" }}
+            {{- $kind_schedule := "Schedule" }}
+            {{- $ns := "open-cluster-management-backup" }}
+            {{- $kind_restore := "Restore" }} 
+            {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (resources)"}}
+            {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0 }}
+            {{- $volsync_restore_cond :=  gt (len ( lookup $api $kind_restore $ns "").items ) 0 }}
+
+            {{- /* The volsync destination-source should be successful */ -}}
+            {{ if and ($volsync_restore_cond) ( not $volsync_backup_cond ) }}
+              {{- range $pvc := (lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items }}
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: PersistentVolumeClaim
+                    metadata:
+                      namespace: {{ $pvc.metadata.namespace }}
+                      name: {{ $pvc.metadata.name }}
+                    status:
+                      phase: Bound
+              {{- end }}
+            {{- end }}
+          remediationAction: inform
+          severity: high           
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: volsync-placement
+  namespace: open-cluster-management-backup
+spec:
+  clusterSets:
+    - default
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: name
+              operator: In
+              values:
+                - local-cluster
+---
+apiVersion: policy.open-cluster-management.io/v1beta1
+kind: PolicySet
+metadata:
+  name: acm-volsync
+  namespace: open-cluster-management-backup
+spec:
+  description: backup support for PVC with cluster.open-cluster-management.io/volsync label
+  policies:
+    - acm-volsync-config
+    - acm-volsync-source
+    - acm-volsync-destination
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: volsync-placement
+  namespace: open-cluster-management-backup
+placementRef:
+  name: volsync-placement
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+subjects:
+  - name: acm-volsync
+    apiGroup: policy.open-cluster-management.io
+    kind: PolicySet
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: default
+  namespace: open-cluster-management-backup
+spec:
+  clusterSet: default
+
