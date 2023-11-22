@@ -36,7 +36,7 @@
 #  AWS_SECRET_ACCESS_KEY: a2V5
 #  RESTIC_PASSWORD: YWJjMTIz
 #  RESTIC_REPOSITORY_COMMON: >-
-#    czM6aHR0cDovL21pbmlvLm1pbmlvLnN2Yy5jbHVzdGVyLmxvY2FsOjkwMDAvbXktYnVja2V0Lw==
+#    czM6aHR0cDovL21pbmlvLm1pbmlvLnN2Yy5jbHVzdGVyLmxvY2FsOjkwMDAvbXktYnVja2V0
 
 #
 # The volsync secret is also defined in the doc above
@@ -173,7 +173,7 @@ spec:
 
             {{- /* Create the volsync ReplicationSource and secret - if BackupSchedule exists ; delete them otherwise */ -}}
             {{ if $volsync_backup_cond }}
-
+              {{- $volsync_pvcs_str := "" }}
               {{- range $pvc := (lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items }}
 
                 {{- if eq $pvc.status.phase "Bound" }}
@@ -183,18 +183,7 @@ spec:
                     {{ $volsync_map = $pvc_config_name }}
                   {{- end }}   
 
-                  - complianceType: musthave
-                    objectDefinition:
-                      apiVersion: v1
-                      kind: ConfigMap
-                      metadata:
-                        name: {{ $volsync_pvcs }}
-                        namespace: {{ $ns }}
-                        labels:
-                          cluster.open-cluster-management.io/backup: volsync
-                          app: {{ $volsync_pvcs }}
-                      data:
-                        {{ ( (cat $pvc.metadata.namespace "_" $pvc.metadata.name ) | replace " " "" ) }}: {{ $pvc.metadata.name }}
+                  {{- $volsync_pvcs_str = ( (cat $volsync_pvcs_str "##" $pvc.metadata.namespace "#" $pvc.metadata.name ) | replace " " "" ) }}
                   
                   {{- $common_restic_repo := ( lookup "v1" "Secret" $ns $volsync_secret ).data.RESTIC_REPOSITORY_COMMON | base64dec }}
                   - complianceType: musthave
@@ -238,10 +227,20 @@ spec:
                         sourcePVC: {{ $pvc.metadata.name }}
                         trigger:
                           schedule: '{{ fromConfigMap $ns $volsync_map "trigger_schedule" }}'
-
                 {{- end }}        
               {{- end }}
-                  
+                  - complianceType: musthave
+                    objectDefinition:
+                      apiVersion: v1
+                      kind: ConfigMap
+                      metadata:
+                        name: {{ $volsync_pvcs }}
+                        namespace: {{ $ns }}
+                        labels:
+                          cluster.open-cluster-management.io/backup: volsync
+                          app: {{ $volsync_pvcs }}
+                      data:
+                        pvcs: {{ trimAll "##" $volsync_pvcs_str }}
             {{- else }}
               {{- range $pvc := (lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items }}  
                   - complianceType: mustnothave
@@ -332,11 +331,12 @@ spec:
             {{- $restore_name := (index ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "velero.io/restore-name").metadata.labels "velero.io/restore-name") }}
             {{- $backup_name := (index ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "velero.io/backup-name").metadata.labels "velero.io/backup-name") }}
 
-            {{ if and ($volsync_restore_cond) ( not $volsync_backup_cond ) }}  
-              {{- range $key, $value := ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "").data }}
+            {{ if and ($volsync_restore_cond) ( not $volsync_backup_cond ) }} 
+              {{- range $pvc_data := split "##" (fromConfigMap $ns $volsync_pvcs "pvcs") }} 
 
-                {{- $pvc_name := $value }}
-                {{- $pvc_namespace := replace ( (cat "_" $value ) | replace " " "" ) "" $key }}
+                {{- $pvc_list := splitn "#" 2 $pvc_data }}
+                {{- $pvc_namespace := $pvc_list._0 }}
+                {{- $pvc_name := $pvc_list._1 }}
 
                 {{ if eq ( lookup $velero_api $kind_restore $ns $restore_name ).metadata.name  $restore_name }}
 
@@ -367,7 +367,8 @@ spec:
                             repository: {{ fromConfigMap $ns $volsync_map "repository" }}
                           trigger:
                             manual: restore-once
-                 {{- end }}      
+                  
+                 {{- end }}   
               {{- end }}
             {{- end }}
           remediationAction: enforce
