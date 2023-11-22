@@ -215,12 +215,13 @@ spec:
 
                   {{- $volsync_pvcs_str = ( (cat $volsync_pvcs_str "##" $pvc.metadata.namespace "#" $pvc.metadata.name ) | replace " " "" ) }}
                   {{- $common_restic_repo := ( lookup "v1" "Secret" $ns $volsync_secret ).data.RESTIC_REPOSITORY_COMMON | base64dec }}
+                  {{- $secretName := ( (cat $pvc.metadata.name "-"  (fromConfigMap $ns $volsync_map "repository") ) | replace " " "" ) }}
                   - complianceType: musthave
                     objectDefinition:
                       apiVersion: v1
                       kind: Secret
                       metadata:
-                        name: '{{ fromConfigMap $ns $volsync_map "repository" }}'
+                        name: '{{ $secretName }}'
                         namespace: {{ $pvc.metadata.namespace }}
                         labels:
                           cluster.open-cluster-management.io/backup: volsync
@@ -231,7 +232,7 @@ spec:
                       apiVersion: v1
                       kind: Secret
                       metadata:
-                        name: '{{ fromConfigMap $ns $volsync_map "repository" }}'
+                        name: '{{ $secretName }}'
                         namespace: {{ $pvc.metadata.namespace }}
                       data:
                         RESTIC_REPOSITORY: {{ ( ( (cat $common_restic_repo "/" $pvc.metadata.namespace "-" $pvc.metadata.name ) | replace " " "" ) | base64enc ) }}                     
@@ -248,7 +249,7 @@ spec:
                           cacheCapacity: '{{ fromConfigMap $ns $volsync_map "cacheCapacity" }}'
                           copyMethod: '{{ fromConfigMap $ns $volsync_map "copyMethod" }}'
                           pruneIntervalDays: '{{ fromConfigMap $ns $volsync_map "pruneIntervalDays" | toInt }}'
-                          repository: '{{ fromConfigMap $ns $volsync_map "repository" }}'
+                          repository: '{{ $secretName }}'
                           retain:
                             daily: '{{ fromConfigMap $ns $volsync_map "retain_daily" | toInt }}'
                             hourly: '{{ fromConfigMap $ns $volsync_map "retain_hourly" | toInt }}'
@@ -387,15 +388,16 @@ spec:
                         spec:
                           resources:
                             requests:
-                              storage: '{{ fromConfigMap $pvc_namespace $pvc_config_info_name "spec.resources.requests.storage" }}'
+                              storage: '{{ fromConfigMap $pvc_namespace $pvc_config_info_name "resources.requests.storage" }}'
                           volumeMode: '{{ fromConfigMap $pvc_namespace $pvc_config_info_name "volumeMode" }}'    
-                          {{ $accessModes := trimAll " " (fromConfigMap $pvc_namespace $pvc_config_info_name "spec.resources.accessModes") }}                  
+                          {{ $accessModes := trimAll " " (fromConfigMap $pvc_namespace $pvc_config_info_name "resources.accessModes") }}                  
                           {{- if not (eq $accessModes "" ) }}
                           accessModes:
                             {{- range $modes := split " " $accessModes }} 
                             - {{ $modes }}
                             {{- end }}
                           {{- end }}  
+                   {{- $secretName := ( (cat $pvc_name "-"  (fromConfigMap $ns $volsync_map "repository") ) | replace " " "" ) }}
 
                     - complianceType: musthave
                       objectDefinition:
@@ -409,7 +411,7 @@ spec:
                             "backup-name": {{ $backup_name }}
                         spec:
                           restic:
-                            repository: '{{ fromConfigMap $ns $volsync_map "repository" }}'
+                            repository: {{ $secretName }} 
                             destinationPVC: {{ $pvc_name }}
                             copyMethod: Direct
                           trigger:
