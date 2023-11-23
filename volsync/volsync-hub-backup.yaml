@@ -70,11 +70,15 @@ spec:
             {{- $volsync_map := "volsync-config" }} 
             {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
             {{- $pv_claim_cond := gt (len ( lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items ) 0 }}
+            {{- $volsync_pvcs := "volsync-config-pvcs" }}
+            
             {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0  }}
-            {{- $volsync_restore_cond :=  gt (len ( lookup $api $kind_restore $ns "").items ) 0 }}
+            {{- $volsync_restore_cond := eq ( lookup "v1" "ConfigMap" $ns $volsync_pvcs ).metadata.name $volsync_pvcs }}
 
-            {{- /* The volsync-config ConfigMap and secret must be defined under the open-cluster-management-backup ns, if a BackupSchedule is running and there are PVCs with the volsync label. */ -}} 
-            {{ if and $pv_claim_cond ( or ($volsync_backup_cond) ($volsync_restore_cond) )}}
+            {{- /* The volsync-config ConfigMap and secret must be defined under the open-cluster-management-backup ns, if a BackupSchedule is running and there are PVCs with the volsync label. */ -}}
+            {{- /* Or for a restore hub, there is a restore resource and a volsync pvc config map */ -}}
+
+            {{ if or (and $pv_claim_cond $volsync_backup_cond) $volsync_restore_cond  }}
             - complianceType: musthave
               objectDefinition:
                 apiVersion: v1
@@ -82,8 +86,10 @@ spec:
                 metadata:
                   name: {{ $volsync_map }}
                   namespace: {{ $ns }}
+                  {{ if not $volsync_restore_cond }}
                   labels:
                     cluster.open-cluster-management.io/backup: volsync
+                  {{- end }}
             - complianceType: musthave
               objectDefinition:
                 apiVersion: v1
@@ -91,8 +97,10 @@ spec:
                 metadata:
                   name: {{ $volsync_secret }}
                   namespace: {{ $ns }}
+                  {{ if not $volsync_restore_cond }}
                   labels:
                     cluster.open-cluster-management.io/backup: volsync
+                  {{- end }}
                 type: Opaque
             {{- end }}
           remediationAction: inform
@@ -111,7 +119,6 @@ spec:
             {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (resources)"}}
             {{- $kind_restore := "Restore" }}
             {{- $ns := "open-cluster-management-backup" }}   
-            {{- $volsync_secret := "restic-secret" }} 
             {{- $volsync_map := "volsync-config" }} 
             {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
             {{- $pv_claim_cond := gt (len ( lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items ) 0 }}
@@ -215,7 +222,7 @@ spec:
 
                   {{- $volsync_pvcs_str = ( (cat $volsync_pvcs_str "##" $pvc.metadata.namespace "#" $pvc.metadata.name ) | replace " " "" ) }}
                   {{- $common_restic_repo := ( lookup "v1" "Secret" $ns $volsync_secret ).data.RESTIC_REPOSITORY_COMMON | base64dec }}
-                  {{- $secretName := ( (cat $pvc.metadata.name "-"  (fromConfigMap $ns $volsync_map "repository") ) | replace " " "" ) }}
+                  {{- $secretName := ( (cat $pvc.metadata.name "-"  (fromConfigMap $ns $volsync_map "repository") ) | replace " " "" ) }}                 
                   - complianceType: musthave
                     objectDefinition:
                       apiVersion: v1
@@ -225,17 +232,13 @@ spec:
                         namespace: {{ $pvc.metadata.namespace }}
                         labels:
                           cluster.open-cluster-management.io/backup: volsync
-                      data: '{{ copySecretData $ns $volsync_secret }}'
-                      type: Opaque
-                  - complianceType: musthave
-                    objectDefinition:
-                      apiVersion: v1
-                      kind: Secret
-                      metadata:
-                        name: '{{ $secretName }}'
-                        namespace: {{ $pvc.metadata.namespace }}
                       data:
-                        RESTIC_REPOSITORY: {{ ( ( (cat $common_restic_repo "/" $pvc.metadata.namespace "-" $pvc.metadata.name ) | replace " " "" ) | base64enc ) }}                     
+                {{- range $key, $value := ( lookup "v1" "Secret" $ns $volsync_secret ).data }}
+                    {{- if not (eq $key "RESTIC_REPOSITORY")}}
+                        {{ $key }}: {{ $value }}
+                    {{- end }}    
+                {{- end }}
+                        RESTIC_REPOSITORY: {{ ( ( (cat $common_restic_repo "/" $pvc.metadata.namespace "-" $pvc.metadata.name ) | replace " " "" ) | base64enc ) }}                      
                       type: Opaque
                   - complianceType: mustonlyhave
                     objectDefinition:
@@ -348,10 +351,8 @@ spec:
 
             {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0 }}
             {{- $restore_label :=  "velero.io/backup-name" }}  
-            {{- $pvc_restore_label :=  "cluster.open-cluster-management.io/backup, velero.io/backup-name" }}
             {{- $backup_name_prefix :=  "acm-credentials-schedule-" }}
             {{- $volsync_pvcs := "volsync-config-pvcs" }}
-            {{- $volsync_restore_cond := eq ( lookup "v1" "ConfigMap" $ns $volsync_pvcs ).metadata.name $volsync_pvcs }}
 
             {{- /* Create the ReplicationDestination only if the PVC has been created by a velero restore which exists on this hub */ -}}
 
@@ -365,6 +366,7 @@ spec:
             {{- /* volsync-config map should exist */ -}}
             {{- $volsync_restore_cond_map := eq ( lookup "v1" "ConfigMap" $ns $volsync_pvcs ).metadata.name $volsync_pvcs }}
             {{- /* acm restore for this volsync-config map should exist and annotations.volsync is not "Completed" */ -}}
+            {{- $acm_restore := lookup $api $kind_restore $ns $acm_restore_name  }}
             {{- $volsync_restore_cond_rs := not ( eq ( lookup $api $kind_restore $ns $acm_restore_name ).metadata.annotations.volsync "Completed" ) }}
 
             {{- $volsync_restore_cond := and $volsync_restore_cond_map $volsync_restore_cond_rs }}
@@ -406,7 +408,23 @@ spec:
                             {{- end }}
                           {{- end }}  
                    {{- $secretName := ( (cat $pvc_name "-"  (fromConfigMap $ns $volsync_map "repository") ) | replace " " "" ) }}
-
+                   {{- $common_restic_repo := ( lookup "v1" "Secret" $ns $volsync_secret ).data.RESTIC_REPOSITORY_COMMON | base64dec }}
+        
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        kind: Secret
+                        metadata:
+                          name: '{{ $secretName }}'
+                          namespace: {{ $pvc_namespace }}
+                        data:
+                  {{- range $key, $value := ( lookup "v1" "Secret" $ns $volsync_secret ).data }}
+                     {{- if not (eq $key "RESTIC_REPOSITORY")}}
+                          {{ $key }}: {{ $value }}
+                      {{- end }}    
+                  {{- end }}
+                          RESTIC_REPOSITORY: {{ ( ( (cat $common_restic_repo "/" $pvc_namespace "-" $pvc_name ) | replace " " "" ) | base64enc ) }}
+                        type: Opaque
                     - complianceType: musthave
                       objectDefinition:
                         kind: ReplicationDestination
@@ -424,7 +442,7 @@ spec:
                             copyMethod: Direct
                           trigger:
                             manual: restore-once
-                 {{- end }}   
+                 {{- end }} 
               {{- end }}
             {{- end }}
           remediationAction: enforce
