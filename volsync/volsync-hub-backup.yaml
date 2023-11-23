@@ -388,6 +388,8 @@ spec:
                     {{- $secret_name := fromConfigMap $ns $volsync_map "repository" }}
                     {{- $pvc_config_info_name := ( (cat $volsync_map "-info-" $pvc_name ) | replace " " "" ) }}
 
+                  {{ if eq ( lookup "v1" "ConfigMap" $pvc_namespace  $pvc_config_info_name ).metadata.name  $pvc_config_info_name }}
+
                     - complianceType: musthave
                       objectDefinition:
                         kind: PersistentVolumeClaim
@@ -442,6 +444,7 @@ spec:
                             copyMethod: Direct
                           trigger:
                             manual: restore-once
+                    {{- end }}        
                  {{- end }} 
               {{- end }}
             {{- end }}
