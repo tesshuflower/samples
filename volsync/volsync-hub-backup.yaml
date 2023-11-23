@@ -360,12 +360,12 @@ spec:
 
             {{- $restore_name := (index ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "velero.io/restore-name").metadata.labels "velero.io/restore-name") }}
             {{- $backup_name := (index ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "velero.io/backup-name").metadata.labels "velero.io/backup-name") }}
-            {{- $acm_restore_name := trimAll "-" (trimAll $backup_name $restore_name) }}
+            {{- $acm_restore_name := trimAll "-" (replace $backup_name "" $restore_name) }}
 
             {{- /* volsync-config map should exist */ -}}
             {{- $volsync_restore_cond_map := eq ( lookup "v1" "ConfigMap" $ns $volsync_pvcs ).metadata.name $volsync_pvcs }}
-            {{- /* acm restore for this volsync-config map should exist and status shows pvc not processed */ -}}
-            {{- $volsync_restore_cond_rs := not ( eq ( lookup $api $kind_restore $ns $acm_restore_name ).status.volsync "Completed" ) }}
+            {{- /* acm restore for this volsync-config map should exist and annotations.volsync is not "Completed" */ -}}
+            {{- $volsync_restore_cond_rs := not ( eq ( lookup $api $kind_restore $ns $acm_restore_name ).metadata.annotations.volsync "Completed" ) }}
 
             {{- $volsync_restore_cond := and $volsync_restore_cond_map $volsync_restore_cond_rs }}
 
