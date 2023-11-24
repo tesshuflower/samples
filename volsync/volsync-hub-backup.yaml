@@ -354,8 +354,6 @@ spec:
             {{- $backup_name_prefix :=  "acm-credentials-schedule-" }}
             {{- $volsync_pvcs := "volsync-config-pvcs" }}
 
-            {{- /* Create the ReplicationDestination only if the PVC has been created by a velero restore which exists on this hub */ -}}
-
             {{- /* Create the volsync ReplicationDestination and secret - if Restore exists, PVC is created by a Restore and no Backup is running */ -}}
             {{- /* Use the volsync-config-pvcns-pvcname config instead of the default volsync-config map, if such map exists under the $ns */ -}}
 
@@ -397,6 +395,8 @@ spec:
                         metadata:
                           name: {{ $pvc_name }}
                           namespace: {{ $pvc_namespace }}
+                        labels:
+                          {{ $volsync_label }}: volsync
                         spec:
                           resources:
                             requests:
@@ -418,7 +418,7 @@ spec:
                         kind: Secret
                         metadata:
                           name: '{{ $secretName }}'
-                          namespace: {{ $pvc_namespace }}
+                          namespace: {{ $pvc_namespace }}                      
                         data:
                   {{- range $key, $value := ( lookup "v1" "Secret" $ns $volsync_secret ).data }}
                      {{- if not (eq $key "RESTIC_REPOSITORY")}}
