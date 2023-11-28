@@ -138,6 +138,10 @@ spec:
                         cluster.open-cluster-management.io/backup: volsync
                     spec:
                       installNamespace: open-cluster-management-agent-addon
+                    status:
+                      conditions:
+                        - status: 'True'
+                          type: Available 
             {{- end }}
           remediationAction: enforce
           severity: high
