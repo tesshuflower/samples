@@ -304,7 +304,7 @@ spec:
 
             {{- /* The volsync replication-source should be successful */ -}}
             {{- range $pvc := (lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items }}
-              - complianceType: mustnothave
+              - complianceType: musthave
                 objectDefinition:
                   apiVersion: volsync.backube/v1alpha1
                   kind: ReplicationSource
@@ -312,7 +312,7 @@ spec:
                     namespace: {{ $pvc.metadata.namespace }}
                   status:
                     latestMoverStatus:
-                      result: Failed
+                      result: Successful
             {{- end }}
           remediationAction: inform
           severity: high
