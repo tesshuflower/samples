@@ -388,6 +388,14 @@ spec:
 
                   {{ if eq ( lookup "v1" "ConfigMap" $pvc_namespace  $pvc_config_info_name ).metadata.name  $pvc_config_info_name }}
 
+                    {{- $storageClassPVC := fromConfigMap $pvc_namespace $pvc_config_info_name "storageClassName" }}
+                    {{- range $changeStorageMap := ( lookup "v1" "ConfigMap" $ns "" "velero.io/change-storage-class" ).items }}
+                      {{ $mappingClass := fromConfigMap $ns $changeStorageMap.metadata.name $storageClassPVC }} 
+                      {{- if not (eq $mappingClass "")}}
+                        {{ $storageClassPVC = $mappingClass }}
+                      {{- end }}
+                    {{- end }}
+
                     - complianceType: musthave
                       objectDefinition:
                         kind: PersistentVolumeClaim
@@ -395,9 +403,10 @@ spec:
                         metadata:
                           name: {{ $pvc_name }}
                           namespace: {{ $pvc_namespace }}
-                        labels:
-                          {{ $volsync_label }}: volsync
+                          labels:
+                            {{ $volsync_label }}: volsync
                         spec:
+                          storageClassName: {{ $storageClassPVC }}
                           resources:
                             requests:
                               storage: '{{ fromConfigMap $pvc_namespace $pvc_config_info_name "resources.requests.storage" }}'
