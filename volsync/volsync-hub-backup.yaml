@@ -185,6 +185,26 @@ spec:
 
             {{- /* Create the volsync ReplicationSource and secret - if BackupSchedule exists ; delete ReplicationSource otherwise */ -}}
             {{ if $volsync_backup_cond }}
+              {{- range $rs := (lookup "volsync.backube/v1alpha1" "ReplicationSource" "" "" "").items }}
+                  {{ $pvc_rs := lookup "v1" "PersistentVolumeClaim" $rs.metadata.namespace $rs.metadata.name $volsync_label}}
+                  {{ if not ( (and (eq $pvc_rs.metadata.name $rs.metadata.name) (index $pvc_rs.metadata.labels $volsync_label) ) ) }}   
+                    - complianceType: musthave
+                      objectDefinition:
+                        kind: ReplicationSource
+                        apiVersion: volsync.backube/v1alpha1
+                        metadata:
+                          name: {{ $rs.metadata.name }}
+                          namespace: {{ $rs.metadata.namespace }}
+                    - complianceType: mustnothave
+                      objectDefinition:
+                        kind: ConfigMap
+                        apiVersion: v1
+                        metadata:
+                          name: {{( (cat $volsync_map "-info-" $rs.metadata.name ) | replace " " "") }}
+                          namespace: {{ $rs.metadata.namespace }}
+                  {{- end }}   
+              {{- end }}
+
               {{- $volsync_pvcs_str := "" }}
               {{- range $pvc := (lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items }}
 
@@ -235,8 +255,6 @@ spec:
                       metadata:
                         name: '{{ $secretName }}'
                         namespace: {{ $pvc.metadata.namespace }}
-                        labels:
-                          cluster.open-cluster-management.io/backup: volsync
                       data:
                 {{- range $key, $value := ( lookup "v1" "Secret" $ns $volsync_secret ).data }}
                     {{- if not (eq $key "RESTIC_REPOSITORY")}}
