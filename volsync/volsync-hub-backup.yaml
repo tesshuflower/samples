@@ -100,6 +100,8 @@ spec:
                   {{ if not $volsync_restore_cond }}
                   labels:
                     cluster.open-cluster-management.io/backup: volsync
+                  data:
+                    RESTIC_REPOSITORY_COMMON_1
                   {{- end }}
                 type: Opaque
             {{- end }}
@@ -290,6 +292,7 @@ spec:
                         sourcePVC: {{ $pvc.metadata.name }}
               {{- end }}
             {{- end }}
+          pruneObjectBehavior: DeleteIfCreated
           remediationAction: enforce
           severity: high 
     - objectDefinition:
