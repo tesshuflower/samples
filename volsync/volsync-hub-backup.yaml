@@ -141,7 +141,6 @@ spec:
                     status:
                       conditions:
                         - status: 'True'
-                          type: Available 
             {{- end }}
           remediationAction: enforce
           severity: high
@@ -313,6 +312,15 @@ spec:
                   status:
                     latestMoverStatus:
                       result: Successful
+              - complianceType: mustnothave
+                objectDefinition:
+                  apiVersion: volsync.backube/v1alpha1
+                  kind: ReplicationSource
+                  metadata:
+                    namespace: {{ $pvc.metadata.namespace }}
+                  status:
+                    latestMoverStatus:
+                      result: Failed 
             {{- end }}
           remediationAction: inform
           severity: high
