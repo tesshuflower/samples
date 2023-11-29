@@ -22,7 +22,7 @@
 # The ConfigMap values are used by the ReplicationSource resources, as documented here:
 # https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes/2.8/html/business_continuity/business-cont-overview#restic-backup-volsync
 #
-# The secret MUST contain only this value RESTIC_REPOSITORY_COMMON ( RESTIC_REPOSITORY will be generated from this ), pointing to a common folder for all PVCs: 
+# The secret MUST contain only this value RESTIC_REPOSITORY ( RESTIC_REPOSITORY for each PVC will be generated from this ), pointing to a common folder for all PVCs: 
 #
 #kind: Secret
 #apiVersion: v1
@@ -35,7 +35,7 @@
 #  AWS_ACCESS_KEY_ID: a2V5X2lk
 #  AWS_SECRET_ACCESS_KEY: a2V5
 #  RESTIC_PASSWORD: YWJjMTIz
-#  RESTIC_REPOSITORY_COMMON: >-
+#  RESTIC_REPOSITORY: >-
 #    czM6aHR0cDovL21pbmlvLm1pbmlvLnN2Yy5jbHVzdGVyLmxvY2FsOjkwMDAvbXktYnVja2V0
 
 #
@@ -45,6 +45,7 @@ apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
 metadata:
   name: acm-volsync-config
+  namespace: open-cluster-management-backup
   annotations:
     policy.open-cluster-management.io/categories: CA Security Assessment and Authorization
     policy.open-cluster-management.io/controls: CA-2 Security Assessments, CA-7 Continuous Monitoring
@@ -100,8 +101,6 @@ spec:
                   {{ if not $volsync_restore_cond }}
                   labels:
                     cluster.open-cluster-management.io/backup: volsync
-                  data:
-                    RESTIC_REPOSITORY_COMMON_1
                   {{- end }}
                 type: Opaque
             {{- end }}
@@ -151,6 +150,7 @@ apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
 metadata:
   name: acm-volsync-source
+  namespace: open-cluster-management-backup
   annotations:
     policy.open-cluster-management.io/categories: CA Security Assessment and Authorization
     policy.open-cluster-management.io/controls: CA-2 Security Assessments, CA-7 Continuous Monitoring
@@ -226,7 +226,7 @@ spec:
                   {{- end }}   
 
                   {{- $volsync_pvcs_str = ( (cat $volsync_pvcs_str "##" $pvc.metadata.namespace "#" $pvc.metadata.name ) | replace " " "" ) }}
-                  {{- $common_restic_repo := ( lookup "v1" "Secret" $ns $volsync_secret ).data.RESTIC_REPOSITORY_COMMON | base64dec }}
+                  {{- $common_restic_repo := ( lookup "v1" "Secret" $ns $volsync_secret ).data.RESTIC_REPOSITORY | base64dec }}
                   {{- $secretName := ( (cat $pvc.metadata.name "-"  (fromConfigMap $ns $volsync_map "repository") ) | replace " " "" ) }}                 
                   - complianceType: musthave
                     objectDefinition:
@@ -332,6 +332,7 @@ apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
 metadata:
   name: acm-volsync-destination
+  namespace: open-cluster-management-backup
   annotations:
     policy.open-cluster-management.io/categories: CA Security Assessment and Authorization
     policy.open-cluster-management.io/controls: CA-2 Security Assessments, CA-7 Continuous Monitoring
@@ -436,7 +437,7 @@ spec:
                               {{- end }}
                             {{- end }}  
                     {{- $secretName := ( (cat $pvc_name "-"  (fromConfigMap $ns $volsync_map "repository") ) | replace " " "" ) }}
-                    {{- $common_restic_repo := ( lookup "v1" "Secret" $ns $volsync_secret ).data.RESTIC_REPOSITORY_COMMON | base64dec }}
+                    {{- $common_restic_repo := ( lookup "v1" "Secret" $ns $volsync_secret ).data.RESTIC_REPOSITORY | base64dec }}
           
                       - complianceType: musthave
                         objectDefinition:
