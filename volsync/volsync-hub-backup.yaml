@@ -100,6 +100,8 @@ spec:
                   {{ if not $volsync_restore_cond }}
                   labels:
                     cluster.open-cluster-management.io/backup: volsync
+                  data:
+                    RESTIC_REPOSITORY_COMMON_1
                   {{- end }}
                 type: Opaque
             {{- end }}
@@ -141,7 +143,6 @@ spec:
                     status:
                       conditions:
                         - status: 'True'
-                          type: Available 
             {{- end }}
           remediationAction: enforce
           severity: high
@@ -291,6 +292,7 @@ spec:
                         sourcePVC: {{ $pvc.metadata.name }}
               {{- end }}
             {{- end }}
+          pruneObjectBehavior: DeleteIfCreated
           remediationAction: enforce
           severity: high 
     - objectDefinition:
@@ -313,6 +315,15 @@ spec:
                   status:
                     latestMoverStatus:
                       result: Successful
+              - complianceType: mustnothave
+                objectDefinition:
+                  apiVersion: volsync.backube/v1alpha1
+                  kind: ReplicationSource
+                  metadata:
+                    namespace: {{ $pvc.metadata.namespace }}
+                  status:
+                    latestMoverStatus:
+                      result: Failed 
             {{- end }}
           remediationAction: inform
           severity: high
