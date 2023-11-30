@@ -456,6 +456,9 @@ spec:
                         {{- end }}
                       {{- end }}  
               {{- $secretName := ( (cat $pvc_name "-"  (fromConfigMap $ns $volsync_map "repository") ) | replace " " "" ) }}
+              {{- /* truncate from the front, the Dest name, if the string is longer than 50 chars ; a job batch starting with volsync-dst- is generated from this name and it must be less than 63 chars */ -}}
+              {{- $rd_name :=  trunc -50 (cat $pvc_name $restore_timestamp_trim | replace " " "") }}
+
               {{- $common_restic_repo := ( lookup "v1" "Secret" $ns $volsync_secret ).data.RESTIC_REPOSITORY | base64dec }}
     
                 - complianceType: musthave
@@ -478,7 +481,7 @@ spec:
                     kind: ReplicationDestination
                     apiVersion: volsync.backube/v1alpha1
                     metadata:
-                      name: {{ $pvc_name }}-{{ $restore_timestamp_trim }}
+                      name: {{ $rd_name }}
                       namespace: {{ $pvc_namespace }}
                       labels:
                         "restore-name": {{ $restore_name }}
