@@ -399,106 +399,98 @@ spec:
             {{- /* Use the volsync-config-pvcns-pvcname config instead of the default volsync-config map, if such map exists under the $ns */ -}}
 
             {{- /* volsync-config map should exist */ -}}
-            {{- $volsync_restore_cond_map := eq ( lookup "v1" "ConfigMap" $ns $volsync_pvcs ).metadata.name $volsync_pvcs }}
+            {{- $volsync_pvcs_map := lookup "v1" "ConfigMap" $ns $volsync_pvcs }}
+            {{- $volsync_restore_cond := eq $volsync_pvcs_map.metadata.name $volsync_pvcs }}
 
-            {{- $volsync_restore_cond := and $volsync_restore_cond_map }}
+            {{ if and ( not $volsync_backup_cond ) ($volsync_restore_cond) }}
 
-            {{ if and ( not $volsync_backup_cond ) ($volsync_restore_cond_map) }}
-
-              {{- $restore_name := (index ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "velero.io/restore-name").metadata.labels "velero.io/restore-name") }}
-              {{- $backup_name := (index ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "velero.io/backup-name").metadata.labels "velero.io/backup-name") }}
-              {{- $acm_restore_name := trimAll "-" (replace $backup_name "" $restore_name) }}
+              {{- $restore_name := (index $volsync_pvcs_map.metadata.labels "velero.io/restore-name") }}
+              {{- $backup_name := (index $volsync_pvcs_map.metadata.labels "velero.io/backup-name") }}
               
               {{- /* acm restore for this volsync-config map should exist and annotations.volsync is not "Completed" */ -}}
-              {{- $acm_restore := lookup $api $kind_restore $ns $acm_restore_name  }}
 
-              {{ if and (eq $acm_restore.metadata.name  $acm_restore_name) (not ( eq ( lookup $api $kind_restore $ns $acm_restore_name ).metadata.annotations.volsync "Completed" )) }}
-                {{- range $pvc_data := split "##" (fromConfigMap $ns $volsync_pvcs "pvcs") }} 
+              {{- range $pvc_data := split "##" (fromConfigMap $ns $volsync_pvcs "pvcs") }} 
 
-                  {{- $pvc_list := splitn "#" 2 $pvc_data }}
-                  {{- $pvc_namespace := $pvc_list._0 }}
-                  {{- $pvc_name := $pvc_list._1 }}
+              {{- $pvc_list := splitn "#" 2 $pvc_data }}
+              {{- $pvc_namespace := $pvc_list._0 }}
+              {{- $pvc_name := $pvc_list._1 }}
 
-                  {{ if eq ( lookup $velero_api $kind_restore $ns $restore_name ).metadata.name  $restore_name }}
+              {{- $pvc_config_name := ( (cat $volsync_map "-" $pvc_namespace "-" $pvc_name ) | replace " " "" ) }}
+              {{ if eq ( lookup "v1" "ConfigMap" $ns $pvc_config_name ).metadata.name  $pvc_config_name }}   
+                {{ $volsync_map = $pvc_config_name }}
+              {{- end }}  
+              {{- $restore_timestamp_trim := trimAll $backup_name_prefix $backup_name  }}
+              {{- $secret_name := fromConfigMap $ns $volsync_map "repository" }}
+              {{- $pvc_config_info_name := ( (cat $volsync_map "-info-" $pvc_name ) | replace " " "" ) }}
 
-                      {{- $pvc_config_name := ( (cat $volsync_map "-" $pvc_namespace "-" $pvc_name ) | replace " " "" ) }}
-                      {{ if eq ( lookup "v1" "ConfigMap" $ns $pvc_config_name ).metadata.name  $pvc_config_name }}   
-                        {{ $volsync_map = $pvc_config_name }}
-                      {{- end }}  
-                      {{- $restore_timestamp_trim := trimAll $backup_name_prefix $backup_name  }}
-                      {{- $secret_name := fromConfigMap $ns $volsync_map "repository" }}
-                      {{- $pvc_config_info_name := ( (cat $volsync_map "-info-" $pvc_name ) | replace " " "" ) }}
+              {{ if eq ( lookup "v1" "ConfigMap" $pvc_namespace  $pvc_config_info_name ).metadata.name  $pvc_config_info_name }}
 
-                    {{ if eq ( lookup "v1" "ConfigMap" $pvc_namespace  $pvc_config_info_name ).metadata.name  $pvc_config_info_name }}
-
-                      {{- $storageClassPVC := fromConfigMap $pvc_namespace $pvc_config_info_name "storageClassName" }}
-                      {{- range $changeStorageMap := ( lookup "v1" "ConfigMap" $ns "" "velero.io/change-storage-class" ).items }}
-                        {{ $mappingClass := fromConfigMap $ns $changeStorageMap.metadata.name $storageClassPVC }} 
-                        {{- if not (eq $mappingClass "")}}
-                          {{ $storageClassPVC = $mappingClass }}
-                        {{- end }}
-                      {{- end }}
-
-                      - complianceType: musthave
-                        objectDefinition:
-                          kind: PersistentVolumeClaim
-                          apiVersion: v1
-                          metadata:
-                            name: {{ $pvc_name }}
-                            namespace: {{ $pvc_namespace }}
-                            labels:
-                              {{ $volsync_label }}: volsync
-                          spec:
-                            storageClassName: {{ $storageClassPVC }}
-                            resources:
-                              requests:
-                                storage: '{{ fromConfigMap $pvc_namespace $pvc_config_info_name "resources.requests.storage" }}'
-                            volumeMode: '{{ fromConfigMap $pvc_namespace $pvc_config_info_name "volumeMode" }}'    
-                            {{ $accessModes := trimAll " " (fromConfigMap $pvc_namespace $pvc_config_info_name "resources.accessModes") }}                  
-                            {{- if not (eq $accessModes "" ) }}
-                            accessModes:
-                              {{- range $modes := split " " $accessModes }} 
-                              - {{ $modes }}
-                              {{- end }}
-                            {{- end }}  
-                    {{- $secretName := ( (cat $pvc_name "-"  (fromConfigMap $ns $volsync_map "repository") ) | replace " " "" ) }}
-                    {{- $common_restic_repo := ( lookup "v1" "Secret" $ns $volsync_secret ).data.RESTIC_REPOSITORY | base64dec }}
-          
-                      - complianceType: musthave
-                        objectDefinition:
-                          apiVersion: v1
-                          kind: Secret
-                          metadata:
-                            name: '{{ $secretName }}'
-                            namespace: {{ $pvc_namespace }}                      
-                          data:
-                    {{- range $key, $value := ( lookup "v1" "Secret" $ns $volsync_secret ).data }}
-                      {{- if not (eq $key "RESTIC_REPOSITORY")}}
-                            {{ $key }}: {{ $value }}
-                        {{- end }}    
-                    {{- end }}
-                            RESTIC_REPOSITORY: {{ ( ( (cat $common_restic_repo "/" $pvc_namespace "-" $pvc_name ) | replace " " "" ) | base64enc ) }}
-                          type: Opaque
-                      - complianceType: musthave
-                        objectDefinition:
-                          kind: ReplicationDestination
-                          apiVersion: volsync.backube/v1alpha1
-                          metadata:
-                            name: {{ $pvc_name }}-{{ $restore_timestamp_trim }}
-                            namespace: {{ $pvc_namespace }}
-                            labels:
-                              "restore-name": {{ $restore_name }}
-                              "backup-name": {{ $backup_name }}
-                          spec:
-                            restic:
-                              repository: {{ $secretName }} 
-                              destinationPVC: {{ $pvc_name }}
-                              copyMethod: Direct
-                            trigger:
-                              manual: restore-once
-                      {{- end }}        
-                  {{- end }} 
+                {{- $storageClassPVC := fromConfigMap $pvc_namespace $pvc_config_info_name "storageClassName" }}
+                {{- range $changeStorageMap := ( lookup "v1" "ConfigMap" $ns "" "velero.io/change-storage-class" ).items }}
+                  {{ $mappingClass := fromConfigMap $ns $changeStorageMap.metadata.name $storageClassPVC }} 
+                  {{- if not (eq $mappingClass "")}}
+                    {{ $storageClassPVC = $mappingClass }}
+                  {{- end }}
                 {{- end }}
+
+                - complianceType: musthave
+                  objectDefinition:
+                    kind: PersistentVolumeClaim
+                    apiVersion: v1
+                    metadata:
+                      name: {{ $pvc_name }}
+                      namespace: {{ $pvc_namespace }}
+                      labels:
+                        {{ $volsync_label }}: volsync
+                    spec:
+                      storageClassName: {{ $storageClassPVC }}
+                      resources:
+                        requests:
+                          storage: '{{ fromConfigMap $pvc_namespace $pvc_config_info_name "resources.requests.storage" }}'
+                      volumeMode: '{{ fromConfigMap $pvc_namespace $pvc_config_info_name "volumeMode" }}'    
+                      {{ $accessModes := trimAll " " (fromConfigMap $pvc_namespace $pvc_config_info_name "resources.accessModes") }}                  
+                      {{- if not (eq $accessModes "" ) }}
+                      accessModes:
+                        {{- range $modes := split " " $accessModes }} 
+                        - {{ $modes }}
+                        {{- end }}
+                      {{- end }}  
+              {{- $secretName := ( (cat $pvc_name "-"  (fromConfigMap $ns $volsync_map "repository") ) | replace " " "" ) }}
+              {{- $common_restic_repo := ( lookup "v1" "Secret" $ns $volsync_secret ).data.RESTIC_REPOSITORY | base64dec }}
+    
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Secret
+                    metadata:
+                      name: '{{ $secretName }}'
+                      namespace: {{ $pvc_namespace }}                      
+                    data:
+              {{- range $key, $value := ( lookup "v1" "Secret" $ns $volsync_secret ).data }}
+                {{- if not (eq $key "RESTIC_REPOSITORY")}}
+                      {{ $key }}: {{ $value }}
+                  {{- end }}    
+              {{- end }}
+                      RESTIC_REPOSITORY: {{ ( ( (cat $common_restic_repo "/" $pvc_namespace "-" $pvc_name ) | replace " " "" ) | base64enc ) }}
+                    type: Opaque
+                - complianceType: musthave
+                  objectDefinition:
+                    kind: ReplicationDestination
+                    apiVersion: volsync.backube/v1alpha1
+                    metadata:
+                      name: {{ $pvc_name }}-{{ $restore_timestamp_trim }}
+                      namespace: {{ $pvc_namespace }}
+                      labels:
+                        "restore-name": {{ $restore_name }}
+                        "backup-name": {{ $backup_name }}
+                    spec:
+                      restic:
+                        repository: {{ $secretName }} 
+                        destinationPVC: {{ $pvc_name }}
+                        copyMethod: Direct
+                      trigger:
+                        manual: restore-once
+                {{- end }}        
               {{- end }}  
             {{- end }}
           remediationAction: enforce
@@ -518,15 +510,15 @@ spec:
             {{- $kind_restore := "Restore" }} 
             {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (resources)"}}
             {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0 }}
-            {{- $volsync_restore_cond :=  gt (len ( lookup $api $kind_restore $ns "").items ) 0 }}
             
             {{- /* volsync-config-pvcs map should exist */ -}}
             {{- $volsync_pvcs := "volsync-config-pvcs" }}
-            {{- $volsync_restore_cond_map := eq ( lookup "v1" "ConfigMap" $ns $volsync_pvcs ).metadata.name $volsync_pvcs }}
+            {{- $volsync_pvcs_map := lookup "v1" "ConfigMap" $ns $volsync_pvcs }}
+            {{- $volsync_restore_cond := eq $volsync_pvcs_map.metadata.name $volsync_pvcs }}
 
             {{- /* The volsync destination-source should be successful */ -}}
-            {{ if and ($volsync_restore_cond) ( not $volsync_backup_cond ) ($volsync_restore_cond_map)}}
-              {{- $backup_name := (index ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "velero.io/backup-name").metadata.labels "velero.io/backup-name") }}
+            {{ if and ( not $volsync_backup_cond ) ($volsync_restore_cond)}}
+              {{- $backup_name := (index $volsync_pvcs_map.metadata.labels "velero.io/backup-name") }}
 
               {{- range $rd := (lookup "volsync.backube/v1alpha1" "ReplicationDestination" "" "" "backup-name").items }}
                 - complianceType: mustnothave
