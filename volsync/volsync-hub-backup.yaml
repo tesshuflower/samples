@@ -185,16 +185,18 @@ spec:
 
             {{- /* Create the volsync ReplicationSource and secret - if BackupSchedule exists ; delete ReplicationSource otherwise */ -}}
             {{ if $volsync_backup_cond }}
-              {{- range $rs := (lookup "volsync.backube/v1alpha1" "ReplicationSource" "" "" "").items }}
+              {{- range $rs := (lookup "volsync.backube/v1alpha1" "ReplicationSource" "" "" $volsync_label).items }}
                   {{ $pvc_rs := lookup "v1" "PersistentVolumeClaim" $rs.metadata.namespace $rs.metadata.name $volsync_label}}
-                  {{ if not ( (and (eq $pvc_rs.metadata.name $rs.metadata.name) (index $pvc_rs.metadata.labels $volsync_label) ) ) }}   
-                    - complianceType: musthave
+                  {{ if or (not (eq $pvc_rs.metadata.name $rs.metadata.name)) (eq (index $pvc_rs.metadata.labels $volsync_label) "<no value>")}}   
+                    - complianceType: mustnothave
                       objectDefinition:
                         kind: ReplicationSource
                         apiVersion: volsync.backube/v1alpha1
                         metadata:
                           name: {{ $rs.metadata.name }}
                           namespace: {{ $rs.metadata.namespace }}
+                          labels:
+                            {{ $volsync_label }}: acm
                     - complianceType: mustnothave
                       objectDefinition:
                         kind: ConfigMap
@@ -263,13 +265,15 @@ spec:
                 {{- end }}
                         RESTIC_REPOSITORY: {{ ( ( (cat $common_restic_repo "/" $pvc.metadata.namespace "-" $pvc.metadata.name ) | replace " " "" ) | base64enc ) }}                      
                       type: Opaque
-                  - complianceType: mustonlyhave
+                  - complianceType: musthave
                     objectDefinition:
                       kind: ReplicationSource
                       apiVersion: volsync.backube/v1alpha1
                       metadata:
                         name: {{ $pvc.metadata.name }}
                         namespace: {{ $pvc.metadata.namespace }}
+                        labels:
+                          {{ $volsync_label }}: acm
                       spec:
                         restic:
                           cacheCapacity: '{{ fromConfigMap $ns $volsync_map "cacheCapacity" }}'
@@ -306,6 +310,8 @@ spec:
                       metadata:
                         name: {{ $pvc.metadata.name }}
                         namespace: {{ $pvc.metadata.namespace }}
+                        labels:
+                          {{ $volsync_label }}: acm
                       spec:
                         sourcePVC: {{ $pvc.metadata.name }}
               {{- end }}
