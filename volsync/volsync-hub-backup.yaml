@@ -124,10 +124,11 @@ spec:
             {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
             {{- $pv_claim_cond := gt (len ( lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items ) 0 }}
             {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0  }}
-            {{- $volsync_restore_cond :=  gt (len ( lookup $api $kind_restore $ns "").items ) 0 }}
+            {{- $volsync_pvcs := "volsync-config-pvcs" }}
+            {{- $volsync_restore_cond := eq ( lookup "v1" "ConfigMap" $ns $volsync_pvcs ).metadata.name $volsync_pvcs }}
 
             {{- /* Create the volsync addon - if BackupSchedule exists and there are PVCs with volsync label */ -}}
-            {{ if and $pv_claim_cond ( or ($volsync_backup_cond) ($volsync_restore_cond) )}}
+            {{ if or (and $pv_claim_cond $volsync_backup_cond) $volsync_restore_cond  }}
                 - complianceType: musthave
                   objectDefinition:
                     apiVersion: addon.open-cluster-management.io/v1alpha1
@@ -402,7 +403,7 @@ spec:
 
             {{- $volsync_restore_cond := and $volsync_restore_cond_map }}
 
-            {{ if and ( not $volsync_backup_cond ) ($volsync_restore_cond_map) }} 
+            {{ if and ( not $volsync_backup_cond ) ($volsync_restore_cond_map) }}
 
               {{- $restore_name := (index ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "velero.io/restore-name").metadata.labels "velero.io/restore-name") }}
               {{- $backup_name := (index ( lookup "v1" "ConfigMap" $ns $volsync_pvcs "velero.io/backup-name").metadata.labels "velero.io/backup-name") }}
