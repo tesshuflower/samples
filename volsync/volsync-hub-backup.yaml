@@ -57,6 +57,39 @@ spec:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
         metadata:
+          name: check-backup-schedule
+        spec:
+          object-templates-raw: |
+            {{- /* Specify the parameters  */ -}}
+            {{- $api := "cluster.open-cluster-management.io/v1beta1" }}
+            {{- $velero_api := "velero.io/v1" }}
+            {{- $kind_schedule := "Schedule" }}
+            {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (resources)"}}
+            {{- $kind_restore := "Restore" }}
+            {{- $ns := "open-cluster-management-backup" }}   
+            {{- $volsync_map := "volsync-config" }} 
+            {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
+            {{- $pv_claim_cond := gt (len ( lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items ) 0 }}
+            {{- $volsync_pvcs := "volsync-config-pvcs" }}
+            
+            {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0  }}
+            {{- $volsync_restore_cond := eq ( lookup "v1" "ConfigMap" $ns $volsync_pvcs ).metadata.name $volsync_pvcs }}
+
+            {{- /* Backup Schedule must be running if this is not a restore hub */ -}}
+            {{ if and (not $volsync_restore_cond) $pv_claim_cond  }}
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: {{ $api }}
+                kind: BackupSchedule
+                metadata:
+                  namespace: {{ $ns }}
+            {{- end }}
+          remediationAction: inform
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
           name: check-storage-configmap
         spec:
           object-templates-raw: |
