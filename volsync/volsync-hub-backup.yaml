@@ -359,7 +359,7 @@ spec:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
         metadata:
-          name: validate-source-replication-status 
+          name: check-source-replication-success 
         spec:
           object-templates-raw: |
             {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
@@ -381,6 +381,27 @@ spec:
                   status:
                     latestMoverStatus:
                       result: Successful       
+              {{- end }}  
+            {{- end }}
+          remediationAction: inform
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-source-replication-errors 
+        spec:
+          object-templates-raw: |
+            {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
+            {{- $ns := "open-cluster-management-backup" }} 
+            {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (resources)"}}
+            {{- $velero_api := "velero.io/v1" }}
+            {{- $kind_schedule := "Schedule" }}
+            {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0  }}
+
+            {{- /* The volsync replication-source should not be failed */ -}}
+            {{- range $pvc := (lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items }}
+              {{ if $volsync_backup_cond }}      
               - complianceType: mustnothave
                 objectDefinition:
                   apiVersion: volsync.backube/v1alpha1
@@ -550,7 +571,49 @@ spec:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
         metadata:
-          name: validate-destination-replication-status 
+          name: check-destination-replication-error 
+        spec:
+          object-templates-raw: |
+            {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
+            {{- $api := "cluster.open-cluster-management.io/v1beta1" }}
+            {{- $velero_api := "velero.io/v1" }}
+            {{- $kind_schedule := "Schedule" }}
+            {{- $ns := "open-cluster-management-backup" }}
+            {{- $kind_restore := "Restore" }} 
+            {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (resources)"}}
+            {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0 }}
+            
+            {{- /* volsync-config-pvcs map should exist */ -}}
+            {{- $volsync_pvcs := "volsync-config-pvcs" }}
+            {{- $volsync_pvcs_map := lookup "v1" "ConfigMap" $ns $volsync_pvcs }}
+            {{- $volsync_restore_cond := eq $volsync_pvcs_map.metadata.name $volsync_pvcs }}
+
+            {{- /* The volsync destination-source should not be in error state */ -}}
+            {{ if and ( not $volsync_backup_cond ) ($volsync_restore_cond)}}
+              {{- $backup_name := (index $volsync_pvcs_map.metadata.labels "velero.io/backup-name") }}
+
+              {{- range $rd := (lookup "volsync.backube/v1alpha1" "ReplicationDestination" "" "" "backup-name").items }}
+                - complianceType: mustnothave
+                  objectDefinition:
+                    apiVersion: volsync.backube/v1alpha1
+                    kind: ReplicationDestination
+                    metadata:
+                      namespace: {{ $rd.metadata.namespace }}
+                      labels:
+                        backup-name: {{ $backup_name }}
+                    status:
+                      conditions:
+                        - reason: Error
+                          type: Synchronizing
+              {{- end }}
+            {{- end }}
+          remediationAction: inform
+          severity: high   
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-destination-replication-success 
         spec:
           object-templates-raw: |
             {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
@@ -572,18 +635,6 @@ spec:
               {{- $backup_name := (index $volsync_pvcs_map.metadata.labels "velero.io/backup-name") }}
 
               {{- range $rd := (lookup "volsync.backube/v1alpha1" "ReplicationDestination" "" "" "backup-name").items }}
-                - complianceType: mustnothave
-                  objectDefinition:
-                    apiVersion: volsync.backube/v1alpha1
-                    kind: ReplicationDestination
-                    metadata:
-                      namespace: {{ $rd.metadata.namespace }}
-                      labels:
-                        backup-name: {{ $backup_name }}
-                    status:
-                      conditions:
-                        - reason: Error
-                          type: Synchronizing
                 - complianceType: musthave
                   objectDefinition:
                     apiVersion: volsync.backube/v1alpha1
@@ -607,7 +658,7 @@ spec:
               {{- end }}
             {{- end }}
           remediationAction: inform
-          severity: high           
+          severity: high         
 ---
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
