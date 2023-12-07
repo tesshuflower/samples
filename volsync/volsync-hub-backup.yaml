@@ -328,9 +328,15 @@ spec:
         spec:
           object-templates-raw: |
             {{- $volsync_label := "cluster.open-cluster-management.io/volsync" }}
+            {{- $ns := "open-cluster-management-backup" }} 
+            {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (resources)"}}
+            {{- $velero_api := "velero.io/v1" }}
+            {{- $kind_schedule := "Schedule" }}
+            {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0  }}
 
             {{- /* The volsync replication-source should be successful */ -}}
             {{- range $pvc := (lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items }}
+              {{ if $volsync_backup_cond }}
               - complianceType: musthave
                 objectDefinition:
                   apiVersion: volsync.backube/v1alpha1
@@ -339,7 +345,7 @@ spec:
                     namespace: {{ $pvc.metadata.namespace }}
                   status:
                     latestMoverStatus:
-                      result: Successful
+                      result: Successful       
               - complianceType: mustnothave
                 objectDefinition:
                   apiVersion: volsync.backube/v1alpha1
@@ -348,7 +354,8 @@ spec:
                     namespace: {{ $pvc.metadata.namespace }}
                   status:
                     latestMoverStatus:
-                      result: Failed 
+                      result: Failed
+              {{- end }}  
             {{- end }}
           remediationAction: inform
           severity: high
