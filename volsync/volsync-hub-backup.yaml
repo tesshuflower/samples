@@ -163,7 +163,7 @@ spec:
             {{- $volsync_restore_cond := eq ( lookup "v1" "ConfigMap" $ns $volsync_pvcs ).metadata.name $volsync_pvcs }}
 
             {{- /* Create the volsync addon - if BackupSchedule exists and there are PVCs with volsync label */ -}}
-            {{ if or (and $pv_claim_cond ) $volsync_restore_cond  }}
+            {{ if or (and $pv_claim_cond $volsync_backup_cond) $volsync_restore_cond  }}
                {{- $is_global_hub := gt (len ( lookup "operator.open-cluster-management.io/v1alpha4" "MulticlusterGlobalHub" "" "" ).items )  0 }}
                {{ if $is_global_hub }}
                 {{- range $global_hub_addon := (lookup "addon.open-cluster-management.io/v1alpha1" "ManagedClusterAddOn" "" "").items }}
