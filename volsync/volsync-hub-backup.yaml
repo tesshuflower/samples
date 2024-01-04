@@ -164,8 +164,6 @@ spec:
 
             {{- /* Create the volsync addon - if BackupSchedule exists and there are PVCs with volsync label */ -}}
             {{ if or (and $pv_claim_cond $volsync_backup_cond) $volsync_restore_cond  }}
-               {{- $is_global_hub := gt (len ( lookup "operator.open-cluster-management.io/v1alpha4" "MulticlusterGlobalHub" "" "" ).items )  0 }}
-               {{ if $is_global_hub }}
                 {{- range $global_hub_addon := (lookup "addon.open-cluster-management.io/v1alpha1" "ManagedClusterAddOn" "" "").items }}
                   {{ if eq $global_hub_addon.metadata.name "multicluster-global-hub-controller"}}
                 - complianceType: musthave
@@ -184,7 +182,6 @@ spec:
                         - status: 'True'
                   {{- end }}
                 {{- end }}
-               {{- end }}
                 - complianceType: musthave
                   objectDefinition:
                     apiVersion: addon.open-cluster-management.io/v1alpha1
