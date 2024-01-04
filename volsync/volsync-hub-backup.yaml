@@ -122,10 +122,8 @@ spec:
                 metadata:
                   name: {{ $volsync_map }}
                   namespace: {{ $ns }}
-                  {{ if not $volsync_restore_cond }}
                   labels:
                     cluster.open-cluster-management.io/backup: volsync
-                  {{- end }}
             - complianceType: musthave
               objectDefinition:
                 apiVersion: v1
@@ -133,10 +131,8 @@ spec:
                 metadata:
                   name: {{ $volsync_secret }}
                   namespace: {{ $ns }}
-                  {{ if not $volsync_restore_cond }}
                   labels:
                     cluster.open-cluster-management.io/backup: volsync
-                  {{- end }}
                 type: Opaque
             {{- end }}
           remediationAction: inform
