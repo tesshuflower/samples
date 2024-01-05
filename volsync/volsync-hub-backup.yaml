@@ -157,6 +157,8 @@ spec:
             {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0  }}
             {{- $volsync_pvcs := "volsync-config-pvcs" }}
             {{- $volsync_restore_cond := eq ( lookup "v1" "ConfigMap" $ns $volsync_pvcs ).metadata.name $volsync_pvcs }}
+            {{- $has_local_cluster_ns := eq (lookup "cluster.open-cluster-management.io/v1" "ManagedCluster" "" "local-cluster").metadata.name "local-cluster" }}
+            {{- $is_hub := "is-hub" }}
 
             {{- /* Create the volsync addon - if BackupSchedule exists and there are PVCs with volsync label */ -}}
             {{ if or (and $pv_claim_cond $volsync_backup_cond) $volsync_restore_cond  }}
@@ -178,6 +180,23 @@ spec:
                         - status: 'True'
                   {{- end }}
                 {{- end }}
+                {{- range $hub_managed_cls := (lookup "cluster.open-cluster-management.io/v1" "ManagedCluster" "" "" $is_hub).items }}
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: addon.open-cluster-management.io/v1alpha1
+                    kind: ManagedClusterAddOn
+                    metadata:
+                      name: volsync
+                      namespace: {{ $hub_managed_cls.metadata.name }}
+                      labels:
+                        cluster.open-cluster-management.io/backup: volsync
+                    spec:
+                      installNamespace: open-cluster-management-agent-addon
+                    status:
+                      conditions:
+                        - status: 'True'
+                {{- end }}
+                {{ if $has_local_cluster_ns }}
                 - complianceType: musthave
                   objectDefinition:
                     apiVersion: addon.open-cluster-management.io/v1alpha1
@@ -192,6 +211,7 @@ spec:
                     status:
                       conditions:
                         - status: 'True'
+                {{- end }}        
             {{- end }}
           remediationAction: enforce
           severity: high
@@ -690,6 +710,13 @@ spec:
               operator: In
               values:
                 - local-cluster
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: is-hub
+              operator: In
+              values:
+                - 'true'                
 ---
 apiVersion: policy.open-cluster-management.io/v1beta1
 kind: PolicySet
