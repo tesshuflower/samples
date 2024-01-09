@@ -72,8 +72,6 @@ spec:
             {{- $pv_claim_cond := gt (len ( lookup "v1" "PersistentVolumeClaim" "" "" $volsync_label).items ) 0 }}
             {{- $volsync_pvcs := "volsync-config-pvcs" }}
             
-            {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0  }}
-
             {{- /* check if volsync_pvcs configmap exists */ -}}
             {{- $volsync_pvcs_map := lookup "v1" "ConfigMap" $ns $volsync_pvcs }}
             {{- $volsync_pvcs_exists := eq $volsync_pvcs_map.metadata.name $volsync_pvcs }}
@@ -381,7 +379,6 @@ spec:
                         sourcePVC: {{ $pvc.metadata.name }}
               {{- end }}
             {{- end }}
-          pruneObjectBehavior: DeleteIfCreated
           remediationAction: enforce
           severity: high 
     - objectDefinition:
