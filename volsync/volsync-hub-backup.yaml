@@ -81,7 +81,7 @@ spec:
 
             {{- $backup_name := "" }}
             {{ if $volsync_pvcs_exists }}
-              {{- $backup_name := (index $volsync_pvcs_map.metadata.labels "velero.io/backup-name") }}
+              {{- $backup_name = (index $volsync_pvcs_map.metadata.labels "velero.io/backup-name") }}
             {{- end }}
 
             {{- /* Backup Schedule must be running if this is not a restore hub */ -}}
@@ -496,7 +496,7 @@ spec:
 
             {{- $backup_name := "" }}
             {{ if $volsync_restore_cond }}
-              {{- $backup_name := (index $volsync_pvcs_map.metadata.labels "velero.io/backup-name") }}
+              {{- $backup_name = (index $volsync_pvcs_map.metadata.labels "velero.io/backup-name") }}
             {{- end }}
               
             {{ if and ($backup_name) ( not $volsync_backup_cond ) ($volsync_restore_cond) }}
