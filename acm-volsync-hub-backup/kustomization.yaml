@@ -1,0 +1,6 @@
+resources:
+- acm-volsync-config.yaml
+- acm-volsync-cr-source.yaml
+- acm-volsync-cr-destination.yaml
+- acm-volsync-placement.yaml
+- acm-volsync-policyset.yaml
