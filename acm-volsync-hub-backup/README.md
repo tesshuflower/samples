@@ -140,6 +140,29 @@ data:
  trigger_schedule: 0 */2 * * *
 ```
 
+The above ConfigMap defines global options for all hub PVCs that need to be backed up with the policy. If you want to provide custom
+properties for a PVC, you should define a ConfigMap using this name convention : `volsync-config-<pvc-ns>-<pvc-name>` 
+
+For example, if the PVC `my-pvc` created in namespace `ns-1` should be backed up every 5 hours, create this ConfigMap under the `open-cluster-management-backup` namespace :
+
+```
+kind: ConfigMap
+apiVersion: v1
+metadata:
+ name: volsync-config-ns-1-my-pvc
+ namespace: open-cluster-management-backup
+ labels:
+   cluster.open-cluster-management.io/backup: cluster-activation
+data:
+ cacheCapacity: 1Gi
+ copyMethod: Snapshot
+ pruneIntervalDays: '2'
+ repository: restic-secret
+ retain_daily: '2'
+ retain_hourly: '3'
+ retain_monthly: '1'
+ trigger_schedule: 0 */5 * * *
+```
 
 #### restic-secret
 
