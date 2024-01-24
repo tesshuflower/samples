@@ -119,6 +119,17 @@ spec:
                 {{- end }}
                         RESTIC_REPOSITORY: {{ ( ( (cat $common_restic_repo "/" $pvc.metadata.namespace "-" $pvc.metadata.name ) | replace " " "" ) | base64enc ) }}                      
                       type: Opaque
+
+                  {{- /* Look for the PVC label used to run a manual snapshot when waiting for the PVC to prepare for backup - ie db freeze */ -}}
+                  {{- /* Don't create the ReplicationSource if the label is not set yet, this is the initial step */ -}}
+                  {{- $wait_for_hooks_pvc_label := "cluster.open-cluster-management.io/backup-pvc-hook" }}
+                  {{- $wait_for_hooks_pvc_value := "undefined" }}
+                  {{- range $pvc_with_hooks := (lookup "v1" "PersistentVolumeClaim" $pvc.metadata.namespace "" $wait_for_hooks_pvc_label).items }}
+                    {{ if eq $pvc_with_hooks.metadata.name  $pvc.metadata.name}}
+                      {{- $wait_for_hooks_pvc_value = (index $pvc.metadata.labels $wait_for_hooks_pvc_label) }}                 
+                    {{- end }}
+                  {{- end }} 
+                  {{ if not ( eq $wait_for_hooks_pvc_value "" ) }}
                   - complianceType: musthave
                     objectDefinition:
                       kind: ReplicationSource
@@ -140,7 +151,14 @@ spec:
                             monthly: '{{ fromConfigMap $ns $volsync_map "retain_monthly" | toInt }}'
                         sourcePVC: {{ $pvc.metadata.name }}
                         trigger:
-                          schedule: '{{ fromConfigMap $ns $volsync_map "trigger_schedule" }}'
+                          {{ if eq $wait_for_hooks_pvc_value "undefined" }} 
+                          {{- /* if the cluster.open-cluster-management.io/backup-pvc-hook hook label was not set, run this using a schedule */ -}} 
+                          schedule: '{{ fromConfigMap $ns $volsync_map "trigger_schedule" }}'  
+                          {{- else }}
+                          {{- /* if the cluster.open-cluster-management.io/backup-pvc-hook hook label was set, run manual */ -}}                                       
+                          manual: '{{ index $pvc.metadata.labels $wait_for_hooks_pvc_label }}' 
+                          {{- end }}   
+                  {{- end }}
                 {{- end }}        
               {{- end }}
                  {{ if not (eq $volsync_pvcs_str "") }}
