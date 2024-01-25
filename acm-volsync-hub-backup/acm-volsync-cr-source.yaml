@@ -37,6 +37,22 @@ spec:
 
             {{- /* Create the volsync ReplicationSource and secret - if BackupSchedule exists ; delete ReplicationSource otherwise */ -}}
             {{ if $volsync_backup_cond }}
+
+              {{- /* The backup-schedule-hook label will be updated with the latest credentials backup execution timestamp */ -}}
+              {{- /* The backup-schedule-hook can be used by the PVC owner to know when to require a new snapshot - ask for one whenever the oadp backup is running */ -}}
+              {{- $wait_for_schedule_hooks_pvc_label := "cluster.open-cluster-management.io/last-backup-schedule" }}
+              {{- $wait_for_schedule_hooks_pvc_value := "" }}
+              {{- $credentials_name := "acm-credentials-schedule" }}
+              {{- $credentials_schedule := lookup $velero_api $kind_schedule $ns $credentials_name }}
+              {{ if and (eq $credentials_schedule.metadata.name $credentials_name) (eq $credentials_schedule.status.phase "Enabled") }}
+                {{- /* If credentials schedule exists and is enabled, take the timestamp from the latest backup */ -}}
+                {{- /* The backup is created on the schedule creation, even if the job schedule is not triggered; so use the schedule creation timestamp initially */ -}}
+                {{- $wait_for_schedule_hooks_pvc_value = $credentials_schedule.metadata.creationTimestamp }}
+                {{ if not (eq "" $credentials_schedule.status.lastBackup )}}
+                  {{- $wait_for_schedule_hooks_pvc_value = $credentials_schedule.status.lastBackup }}
+                {{- end }}
+              {{- end }}
+
               {{- range $rs := (lookup "volsync.backube/v1alpha1" "ReplicationSource" "" "" $volsync_label).items }}
                 {{- $pvc_rs := (lookup "v1" "PersistentVolumeClaim" $rs.metadata.namespace "" $volsync_label).items }}
                 {{- /* If the PVC in the ReplicationSource ns no longer exists or doesn't have the volsync label, delete the ReplicationSource */ -}}
@@ -126,7 +142,16 @@ spec:
                   {{- $wait_for_hooks_pvc_value := "undefined" }}
                   {{- range $pvc_with_hooks := (lookup "v1" "PersistentVolumeClaim" $pvc.metadata.namespace "" $wait_for_hooks_pvc_label).items }}
                     {{ if eq $pvc_with_hooks.metadata.name  $pvc.metadata.name}}
-                      {{- $wait_for_hooks_pvc_value = (index $pvc.metadata.labels $wait_for_hooks_pvc_label) }}                 
+                      {{- $wait_for_hooks_pvc_value = (index $pvc.metadata.labels $wait_for_hooks_pvc_label) }}
+                  - complianceType: musthave
+                    objectDefinition:
+                      kind: PersistentVolumeClaim
+                      apiVersion: v1
+                      metadata:
+                        name: {{ $pvc.metadata.name }}
+                        namespace: {{ $pvc.metadata.namespace }}
+                        labels:
+                          {{ $wait_for_schedule_hooks_pvc_label }}: {{ $wait_for_schedule_hooks_pvc_value | replace ":" "." }}            
                     {{- end }}
                   {{- end }} 
                   {{ if not ( eq $wait_for_hooks_pvc_value "" ) }}
