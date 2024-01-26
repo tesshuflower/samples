@@ -252,7 +252,7 @@ ACM user, on Restore hub:
   - The user manually installs the policy from the community project
 6. Creates an ACM Restore resource and restores active data
   - The policy creates the volsync `ReplicationDestination` for all PVCs defined in the restored volsync-config-pvcs ConfigMap
-  - the app using the PVC must be restored after the PVC is created 
+  - the app using the PVC must be restored after the PVC is created so make sure these resources are restored at cluster activation time.  
 
 ## References
 - [Volsync](https://access.redhat.com/login?redirectTo=https%3A%2F%2Faccess.redhat.com%2Fdocumentation%2Fen-us%2Fred_hat_advanced_cluster_management_for_kubernetes%2F2.8%2Fhtml%2Fbusiness_continuity%2Fbusiness-cont-overview%23restic-backup-volsync)
