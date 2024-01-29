@@ -38,12 +38,12 @@ spec:
             {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0 }}
             {{- $restore_label :=  "velero.io/backup-name" }}  
             {{- $backup_name_prefix :=  "acm-credentials-schedule-" }}
-            {{- $volsync_pvcs := "acm-hub-pvc-backup-config-pvcs" }}
+            {{- $volsync_pvcs := "hub-pvc-backup-pvcs" }}
 
             {{- /* Create the volsync ReplicationDestination and secret - if Restore exists, PVC is created by a Restore and no Backup is running */ -}}
-            {{- /* Use the acm-hub-pvc-backup-config-pvcns-pvcname config instead of the default acm-hub-pvc-backup-config map, if such map exists under the $ns */ -}}
+            {{- /* Use the hub-pvc-backup-pvcs-pvcns-pvcname config instead of the default acm-hub-pvc-backup-config map, if such map exists under the $ns */ -}}
 
-            {{- /* acm-hub-pvc-backup-config map should exist and have a backup-name label */ -}}
+            {{- /* hub-pvc-backup-pvcs map should exist and have a backup-name label */ -}}
             {{- $volsync_pvcs_map := lookup "v1" "ConfigMap" $ns $volsync_pvcs }}
             {{- $volsync_restore_cond := eq $volsync_pvcs_map.metadata.name $volsync_pvcs }}
 
@@ -183,7 +183,7 @@ spec:
             {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0 }}
             
             {{- /* acm-hub-pvc-backup-config-pvcs map should exist */ -}}
-            {{- $volsync_pvcs := "acm-hub-pvc-backup-config-pvcs" }}
+            {{- $volsync_pvcs := "hub-pvc-backup-pvcs" }}
             {{- $volsync_pvcs_map := lookup "v1" "ConfigMap" $ns $volsync_pvcs }}
             {{- $volsync_restore_cond := eq $volsync_pvcs_map.metadata.name $volsync_pvcs }}
 
@@ -225,7 +225,7 @@ spec:
             {{- $volsync_backup_cond := gt (len ( lookup $velero_api $kind_schedule $ns "" $schedule_label).items ) 0 }}
             
             {{- /* acm-hub-pvc-backup-config-pvcs map should exist */ -}}
-            {{- $volsync_pvcs := "acm-hub-pvc-backup-config-pvcs" }}
+            {{- $volsync_pvcs := "hub-pvc-backup-pvcs" }}
             {{- $volsync_pvcs_map := lookup "v1" "ConfigMap" $ns $volsync_pvcs }}
             {{- $volsync_restore_cond := eq $volsync_pvcs_map.metadata.name $volsync_pvcs }}
 
