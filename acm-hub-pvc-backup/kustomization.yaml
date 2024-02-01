@@ -2,5 +2,5 @@ resources:
 - acm-hub-pvc-backup-config.yaml
 - acm-hub-pvc-backup-source.yaml
 - acm-hub-pvc-backup-destination.yaml
-- acm-volsync-placement.yaml
+- acm-acm-hub-pvc-placement.yaml
 - acm-hub-pvc-backup-policyset.yaml
