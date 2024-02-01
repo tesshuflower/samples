@@ -42,8 +42,8 @@ PolicySet   | Description
 Policy      | Description 
 -------------------------------------------| ----------- 
 [acm-hub-pvc-backup-config](./acm-hub-pvc-backup-config.yaml)                       | Trigerred to run on the hub only if the hub has any PVCs with the `cluster.open-cluster-management.io/backup-hub-pvc` label. It installs the volsync-addon on the hub or any managed cluster matching the `acm-hub-pvc-backup-policyset` PolicySet's placement. It reports on policy missing configuration: reports if the user had not create the `acm-hub-pvc-backup-restic-secret` Secret and `hub-pvc-backup` ConfigMap resources under the PolicySet namespace. The Secret is used by volsync to connect to the storage location where the PVC snapshot is stored. The `hub-pvc-backup` ConfigMap is used to define the ReplicationSource configuration, as defined [here](https://access.redhat.com/login?redirectTo=https%3A%2F%2Faccess.redhat.com%2Fdocumentation%2Fen-us%2Fred_hat_advanced_cluster_management_for_kubernetes%2F2.8%2Fhtml%2Fbusiness_continuity%2Fbusiness-cont-overview%23restic-backup-volsync). You can provide a custom configuration file for a PVC by creating the `hub-pvc-backup-pvcns-pvcname` ConfigMap under the PolicySet namespace; this will overwrite the default `hub-pvc-backup` ConfigMap for the specified volume.
-[acm-hub-pvc-backup-source](./acm-hub-pvc-backup-source.yaml)                         | Creates a volsync ReplicationSource for all PVCs with the `cluster.open-cluster-management.io/backup-hub-pvc` label.
-[acm-hub-pvc-backup-destination](./acm-hub-pvc-backup-destination.yaml)                        | In a restore hub backup operation, when the credentials backup is restored on a new hub, it creates a volsync ReplicationDestination for all PVCs with the `cluster.open-cluster-management.io/backup-hub-pvc` label. This is because the  `acm-hub-pvc-backup-source` creates a set of configuration ConfigMaps defining the PVCs for which a snapshot is stored. These ConfigMaps have the `cluster.open-cluster-management.io/backup` backup label so thy are backed up by the hub credentials backup. They are used to recreate the PVCs on the restore hub.
+[acm-hub-pvc-backup-source](./acm-hub-pvc-backup-source.yaml)                         | Creates a volsync ReplicationSource for all PVCs with the `cluster.open-cluster-management.io/backup-hub-pvc` label. The Policy depends on the `acm-hub-pvc-backup-config` Policy so it only runs if the `acm-hub-pvc-backup-config` Policy is Compliant.
+[acm-hub-pvc-backup-destination](./acm-hub-pvc-backup-destination.yaml)                        | In a restore hub backup operation, when the credentials backup is restored on a new hub, it creates a volsync ReplicationDestination for all PVCs with the `cluster.open-cluster-management.io/backup-hub-pvc` label. This is because the  `acm-hub-pvc-backup-source` creates a set of configuration ConfigMaps defining the PVCs for which a snapshot is stored. These ConfigMaps have the `cluster.open-cluster-management.io/backup` backup label so they are backed up by the hub credentials backup. These ConfigMaps are used to recreate the PVCs on the restore hub. The Policy depends on the `acm-hub-pvc-backup-config` Policy so it only runs if the `acm-hub-pvc-backup-config` Policy is Compliant.
 
 
 ### Policies 
@@ -53,7 +53,7 @@ Policy      | Description
 
 ### Configuration Policy
 
-The `acm-hub-pvc-backup-config` Policy validates the configuration for both types of hubs ( backup or restore ). If any PVC is found with the cluster.open-cluster-management.io/backup-hub-pvc label, it installs the volsync addon and verifies the user has created the acm-hub-pvc-backup-restic-secret used to connect to the storage where the snapshot are saved.
+The `acm-hub-pvc-backup-config` Policy validates the configuration for both types of hubs ( backup or restore ). If any PVC is found with the cluster.open-cluster-management.io/backup-hub-pvc label, it installs the volsync addon and verifies the user has created the Policy namesoace the `acm-hub-pvc-backup-restic-secret` Secret, used to connect to the storage where the snapshot are saved.It also verifies if the user has created the `hub-pvc-backup` ConfigMap used to define the `ReplicationSource` configuration.
 
 
 ![Configuration Policy](images/config_policy.png)
@@ -248,6 +248,7 @@ ACM user, on Primary hub:
 
 
 ACM user, on Restore hub:
+
 5. Enables backup on MultiClusterHub. This installs the hub backup component
   - The user manually installs the policy from the community project
 6. Creates an ACM Restore resource and restores active data
