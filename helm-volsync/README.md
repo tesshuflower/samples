@@ -1,8 +1,8 @@
-Deploy helm app on managed clusters using the helm subscription.
-The Policy attached creates the channel, subs, policy for all volsync addons.
+Deploy volsync on managed clusters using the helm subscription.
+The Policy attached here (volsync-addon-subscription) creates the channel, subscription, placement for all volsync addons.
 
-When an addon is created or modified, all the volsync addon controller should do is to add an anntation to the ManagedCluster resource in this form : volsync=0.10.0 , where 0.10.0 is the defaul channel or the channel set by the user with the annotation. 
-The Policy is going to take care of the subscription/placement creation, see below. The helm will be deployed on the ManagedCluster because the placement matches the cluster, based on the volsync=0.10.0  label.
+When an addon is created or modified, all the volsync addon controller should do is to add an anntation to the ManagedCluster resource in this form : volsync=0.10.0 , where 0.10.0 is the defaul channel or the channel set by the user with the operator-subscription-channel annotation. 
+The Policy is going to take care of the subscription and placement creation. The chart will be deployed on the ManagedCluster because the placement matches the cluster, based on the volsync=0.10.0  label.
 
 
 Steps, followed by the policy:
