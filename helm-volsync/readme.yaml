@@ -17,7 +17,11 @@ spec:
   type: HelmRepo
 
 
-2. When a volsync addon is created, it should create a Subscription + Placement rule 
+2. When a volsync addon is created, it should create a Subscription + Placement rule using either the default volsync channel or the channel set with the operator-subscription-channel
+It creates one subscription + placement for each volsync channel.
+When an addon is created or modified, all the volsync addon should do is to add an anntation to the ManagedCluster resource in this form : volsync=0.10.0  
+The Policy is going to take care of the subscription/placement creation. The helm will be deployed on the ManagedCluster because the placement matches the cluster, based on 
+the volsync=0.10.0  label.
 
 apiVersion: apps.open-cluster-management.io/v1
 kind: Subscription
