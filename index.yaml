@@ -8,5 +8,5 @@ entries:
     digest: 049c7ca45d6219803c9c0e04d39b318e915c5edc3ccdb4a7da5b26534660d95c
     name: helloworld-helm
     urls:
-    - https://raw.githubusercontent.com/birsanv/samples/main/helloworld-helm-0.2.0.tgz
+    - https://raw.githubusercontent.com/fxiang1/app-samples/main/helloworld-helm-0.2.0.tgz
     version: 0.2.0
