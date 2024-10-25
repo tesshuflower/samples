@@ -3,6 +3,9 @@ entries:
   helloworld-helm:
   - apiVersion: v1
     appVersion: "1.0"
+    created: "2022-09-15T14:59:16.866718-04:00"
+    description: A sample hello world helm chart
+    digest: 049c7ca45d6219803c9c0e04d39b318e915c5edc3ccdb4a7da5b26534660d95c
     description: A sample hello world helm chart
     name: helloworld-helm
     urls:
