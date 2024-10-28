@@ -1,14 +1,17 @@
-Deploy volsync on managed clusters using the helm subscription.
+This shows how to deploy volsync on managed clusters  using the helm subscription.
 The Policy attached here (volsync-addon-subscription) creates the channel, subscription, placement for all volsync addons.
 
-When an addon is created or modified, all the volsync addon controller should do is to add an anntation to the ManagedCluster resource in this form : volsync=0.10.0 , where 0.10.0 is the defaul channel or the channel set by the user with the operator-subscription-channel annotation. 
-The Policy is going to take care of the subscription and placement creation. The chart will be deployed on the ManagedCluster because the placement matches the cluster, based on the volsync=0.10.0  label.
+The volsync addon controller implementation:
+- When a volsync addon is created or modified, all the volsync addon controller should add a label annotation to the ManagedCluster resource in this form : volsync=0.10.0 , where 0.10.0 is the defaul channel or the channel set by the user with the operator-subscription-channel annotation. 
+- When a volsync addon is deleted, remove the  volsync label from the ManagedCluster resource
+
+The Policy is going to create the main volsync channel and for each volsync chart version, create the subscription and placement. The volsync chart will be deployed on all managed clusters with a label volsync that matches the subscription placement( for example volsync=0.10.0  label.) 
 
 
 Steps, followed by the policy:
-1. creates the Channel resource ( the repo where the channel points needs only an index.yaml file containing the helm descriptions - this is all that this repo requires )
+1. The Policy creates the Channel resource ( the repo where the channel points needs only an index.yaml file containing the volsync chart descriptions - this is all that this repo needs to provide )
 
-Sample for the index.yaml expected by the helm subscription : https://github.com/fxiang1/app-samples/blob/main/index.yaml
+Sample for the index.yaml used by the helm subscription : https://github.com/fxiang1/app-samples/blob/main/index.yaml
 
 ```yaml
 apiVersion: apps.open-cluster-management.io/v1
