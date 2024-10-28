@@ -2,7 +2,6 @@ apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
 metadata:
   name: volsync-addon-subscription
-  namespace: volsync-ns
   annotations:
     policy.open-cluster-management.io/categories: CA Security Assessment and Authorization
     policy.open-cluster-management.io/controls: CA-2 Security Assessments, CA-7 Continuous Monitoring
@@ -17,10 +16,16 @@ spec:
           name: create-volsync-channel
         spec:
           object-templates-raw: |
-            {{- /* Specify the parameters  */ -}}
-            {{ $channel_path := "https://raw.githubusercontent.com/fxiang1/app-samples/main" }}
-            {{ $channel_name := "volsync-channel" }}
-            {{ $channel_ns := "volsync-ns" }}
+            
+            {{- /* volsync_config_map is a ConfigMap created by the volsync controller, setting the volsync chart github and default volsync version  */ -}}
+            {{- $volsync_config_map := "volsync-acm-config" }} 
+            {{- /* This is the volsync namespace, where the configmap is created */ -}}
+            {{- $ns := "openshift-operators" }}
+
+            {{ $channel_path := (fromConfigMap $ns $volsync_config_map "channel_path") }}
+            {{- /* This is the volsync channel namespace */ -}}
+            {{ $channel_ns := (fromConfigMap $ns $volsync_config_map "channel_ns") }}
+            {{ $channel_name := (fromConfigMap $ns $volsync_config_map "channel_name")}}
 
             - complianceType: musthave
               objectDefinition:
@@ -42,12 +47,20 @@ spec:
         spec:
           object-templates-raw: |
             {{- /* Specify the parameters  */ -}}
-            {{ $channel := "volsync-ns/volsync-channel" }}
-            {{ $subscr_ns := "volsync-ns" }}
+            {{- $volsync_config_map := "volsync-acm-config" }} 
+            {{- $ns := "openshift-operators" }}
 
-            {{ $default_version := "1.0.3"}}
-            {{ $addon_name_volsync := "volsync"}}
-            {{ $package_name := "mortgage" }}
+            {{- /* This is the volsync channel namespace */ -}}
+            {{ $channel_ns := (fromConfigMap $ns $volsync_config_map "channel_ns") }}
+            {{ $channel_name := (fromConfigMap $ns $volsync_config_map "channel_name")}}
+
+            {{ $channel := (cat $channel_ns "/" $channel_name) | replace " " "" }}
+            {{ $subscr_ns := (fromConfigMap $ns $volsync_config_map "subscription_ns") }}
+
+            {{ $package_name := (fromConfigMap $ns $volsync_config_map "package_name") }}
+            {{ $default_version := (fromConfigMap $ns $volsync_config_map "default_version")}}
+
+            {{ $addon_name_volsync := (fromConfigMap $ns $volsync_config_map "addon_name_volsync")}}
 
             {{- /* Get only non OpenShift clusters */ -}}
             {{ $mgd_cls_label := "vendor, vendor notin (OpenShift)"}}
@@ -114,47 +127,7 @@ spec:
             {{- end }}
           remediationAction: enforce
           severity: high
-    - objectDefinition:
-        apiVersion: policy.open-cluster-management.io/v1
-        kind: ConfigurationPolicy
-        metadata:
-          name: check-subscription-managed-cluster
-        spec:
-          object-templates-raw: |
-            {{- /* Specify the parameters  */ -}}
-            {{ $channel := "volsync-ns/volsync-channel" }}
-            {{ $default_version := "1.0.3"}}
-            {{ $addon_name_volsync := "volsync"}}
-            {{ $subscr_ns := "volsync-ns" }}
 
-            {{- /* Get only non OpenShift clusters */ -}}
-            {{ $mgd_cls_label := "vendor, vendor notin (OpenShift)"}}
-            {{- range $clusters := (lookup "cluster.open-cluster-management.io/v1" "ManagedCluster" "" "" $mgd_cls_label).items }}
-
-              {{ $addon := (lookup "addon.open-cluster-management.io/v1alpha1" "ManagedClusterAddOn" $clusters.metadata.name $addon_name_volsync) }}
-              {{ if  eq $addon.metadata.name $addon_name_volsync  }}
-                {{- /* get the overwrite version if operator-subscription-channel is set; use it instead of the default volsync version  */ -}}
-                {{ $version := $default_version }}
-                {{ if not (empty (index $addon.metadata "annotations") ) }}
-                  {{- $annotation_channel := (index $addon.metadata.annotations "operator-subscription-channel") }}
-                  {{ if not (empty $annotation_channel) }}
-                    {{ $version = $annotation_channel }}
-                  {{- end }}
-                {{- end }}
-              - complianceType: mustnothave
-                objectDefinition:
-                  apiVersion: apps.open-cluster-management.io/v1
-                  kind: Subscription
-                  metadata:
-                    name: volsync-subscription-{{ $version }}
-                    namespace: {{ $addon.metadata.namespace }}
-                  status:
-                    phase: PropagationFailed
-              {{- end }}
-            {{- end }}
-
-          remediationAction: inform
-          severity: high
     - objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
@@ -163,10 +136,20 @@ spec:
         spec:
           object-templates-raw: |
             {{- /* Specify the parameters  */ -}}
-            {{ $channel := "volsync-ns/volsync-channel" }}
-            {{ $default_version := "1.0.3"}}
-            {{ $addon_name_volsync := "volsync"}}
-            {{ $subscr_ns := "volsync-ns" }}
+            {{- $volsync_config_map := "volsync-acm-config" }} 
+            {{- $ns := "openshift-operators" }}
+
+            {{- /* This is the volsync channel namespace */ -}}
+            {{ $channel_ns := (fromConfigMap $ns $volsync_config_map "channel_ns") }}
+            {{ $channel_name := (fromConfigMap $ns $volsync_config_map "channel_name")}}
+
+            {{ $channel := (cat $channel_ns "/" $channel_name) | replace " " "" }}
+            {{ $subscr_ns := (fromConfigMap $ns $volsync_config_map "subscription_ns") }}
+
+            {{ $package_name := (fromConfigMap $ns $volsync_config_map "package_name") }}
+            {{ $default_version := (fromConfigMap $ns $volsync_config_map "default_version")}}
+
+            {{ $addon_name_volsync := (fromConfigMap $ns $volsync_config_map "addon_name_volsync")}}
 
             {{- /* Get only non OpenShift clusters */ -}}
             {{ $mgd_cls_label := "vendor, vendor notin (OpenShift)"}}
@@ -201,7 +184,6 @@ apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
   name: volsync-addon-subscription-placement
-  namespace: volsync-ns
 spec:
   predicates:
     - requiredClusterSelector:
@@ -216,7 +198,6 @@ apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
 metadata:
   name: volsync-addon-subscription-placement
-  namespace: volsync-ns
 placementRef:
   name: volsync-addon-subscription-placement
   apiGroup: cluster.open-cluster-management.io
@@ -229,7 +210,6 @@ subjects:
 apiVersion: cluster.open-cluster-management.io/v1beta2
 kind: ManagedClusterSetBinding
 metadata:
-  namespace: volsync-ns
   name: global
 spec:
   clusterSet: global

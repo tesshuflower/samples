@@ -1,0 +1,13 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: volsync-acm-config
+  namespace: openshift-operators
+data:
+  channel_name : "volsync-channel"
+  channel_ns: "volsync-ns"
+  channel_path : "https://raw.githubusercontent.com/fxiang1/app-samples/main"
+  subscription_ns: "volsync-ns"
+  default_version: "1.0.3"
+  package_name: "mortgage"
+  addon_name_volsync: "volsync"
