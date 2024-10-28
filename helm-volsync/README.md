@@ -2,7 +2,7 @@ This shows how to deploy volsync on managed clusters  using the helm subscriptio
 The Policy attached here (volsync-addon-subscription) creates the channel, subscription, placement for all volsync addons.
 
 The volsync addon controller implementation:
-- When a volsync addon is created or modified, the volsync addon controller should add a label annotation to the ManagedCluster resource in this form : volsync=0.10.0 , where 0.10.0 is the defaul channel or the channel set by the user with the operator-subscription-channel annotation. 
+- When a volsync addon is created or modified, the volsync addon controller should add a label annotation to the ManagedCluster resource in this form : volsync=0.10.0 , where 0.10.0 is the default channel or the channel set by the user with the operator-subscription-channel annotation. 
 - When a volsync addon is deleted, remove the  volsync label from the ManagedCluster resource
 
 The Policy is going to create the main volsync channel and for each volsync chart version, create the subscription and placement. The volsync chart will be deployed on all managed clusters with a label volsync that matches the subscription placement( for example volsync=0.10.0  label.) 
