@@ -6,8 +6,8 @@ metadata:
 data:
   channel_name : "volsync-channel"
   channel_ns: "volsync-ns"
-  channel_path : "https://raw.githubusercontent.com/fxiang1/app-samples/main"
+  channel_path : "https://github.com/backube/helm-charts"
   subscription_ns: "volsync-ns"
-  default_version: "1.0.3"
-  package_name: "mortgage"
+  default_version: "0.10"
+  package_name: "volsync"
   addon_name_volsync: "volsync"

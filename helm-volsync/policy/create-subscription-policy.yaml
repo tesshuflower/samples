@@ -86,9 +86,9 @@ spec:
                 spec:
                   channel: >-
                     {{ $channel }}
-                  name: mortgage
+                  name: {{ $package_name }}
                   packageFilter:
-                    version: {{ $version }}
+                    version: "{{ $version }}"
                   packageOverrides:
                     - packageAlias: {{ $package_name }}
                       packageName: {{ $package_name }}
@@ -113,7 +113,7 @@ spec:
                             - key: volsync
                               operator: In
                               values:
-                                - {{ $version }}
+                                - "{{ $version }}"
             - complianceType: musthave
               objectDefinition:
                 apiVersion: cluster.open-cluster-management.io/v1beta2
