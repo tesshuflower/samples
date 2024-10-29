@@ -1,7 +1,7 @@
 This sample shows how to deploy volsync on managed clusters  using the helm subscription.
 The Policy attached here [volsync-addon-subscription](./policy/create-subscription-policy.yaml) creates the channel, subscription, placement for all volsync addons.
 It uses the [volsync-acm-config.yaml](./policy/volsync-acm-config.yaml) ConfigMap to define the volsync chart channel repo and other volsync default settings ( stable channel, etc.
-The channel point to a repo which should contain an index.yaml in this format [index.yaml](../index.yaml), or [this](https://github.com/fxiang1/app-samples/blob/main/index.yaml)
+
 The Policy creates the main volsync channel and for each volsync chart version, create the subscription and placement. The volsync chart will be deployed on all managed clusters with a label volsync that matches the subscription placement( for example volsync=0.10.0  label.) 
 
 What the volsync addon controller should do:
@@ -12,8 +12,6 @@ What the volsync addon controller should do:
 Steps, followed by the policy:
 1. The Policy creates the Channel resource ( the repo where the channel points needs only an index.yaml file containing the volsync chart descriptions - this is all that this repo needs to provide )
 
-Sample for the index.yaml used by the helm subscription : https://github.com/fxiang1/app-samples/blob/main/index.yaml
-
 ```yaml
 apiVersion: apps.open-cluster-management.io/v1
 kind: Channel
@@ -21,7 +19,7 @@ metadata:
   name: volsync-channel
   namespace: volsync-ns
 spec:
-  pathname: 'https://raw.githubusercontent.com/volsync/main' # this is where the volsync index.yaml is located
+  pathname: 'https://backube.github.io/helm-charts'
   type: HelmRepo
 ```
 
