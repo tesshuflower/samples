@@ -4,5 +4,5 @@ metadata:
   name: volsync-channel
   namespace: volsync-ns
 spec:
-  pathname: 'https://raw.githubusercontent.com/fxiang1/app-samples/main'
+  pathname: 'https://backube.github.io/helm-charts'
   type: HelmRepo
