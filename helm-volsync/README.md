@@ -35,7 +35,7 @@ metadata:
 spec:
   channel: >-
     volsync-ns/volsync-channel
-  name: mortgage
+  name: volsync
   packageFilter:
     version: 0.10.0
   packageOverrides:
