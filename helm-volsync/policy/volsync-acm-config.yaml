@@ -6,8 +6,8 @@ metadata:
 data:
   channel_name : "volsync-channel"
   channel_ns: "volsync-ns"
-  channel_path : "https://github.com/backube/helm-charts"
+  channel_path : "https://backube.github.io/helm-charts"
   subscription_ns: "volsync-ns"
-  default_version: "0.10"
+  default_version: "0.11.0-rc.1"
   package_name: "volsync"
   addon_name_volsync: "volsync"
