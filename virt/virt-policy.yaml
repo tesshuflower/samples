@@ -89,11 +89,11 @@ spec:
                 {{- /* vms_ns gives the list of all VM names  */ -}}  
                 {{ $vms_names := " " }}   
 
-                {{- range $vms := (lookup "cluster.open-cluster-management.io/v1" "ManagedCluster" "" "" ).items }}
+                {{- range $vms := (lookup "kubevirt.io/v1" "VirtualMachine" "" "" ).items }}
                         
                   {{ if not (contains $vms.metadata.name $vms_ns) }}
                     {{- /* add VM namespace if not already in the vms_ns  */ -}}
-                    {{- $vms_ns = (cat $vms_ns $vms.metadata.name " ") }}
+                    {{- $vms_ns = (cat $vms_ns $vms.metadata.namespace " ") }}
                   {{- end }}
                   {{ if not (contains $vms.metadata.name $vms_names) }}
                     {{- /* add VM name if not already in the vms_names  */ -}}
@@ -138,6 +138,7 @@ spec:
                       template:
                         ttl: {{ $ttl_schedule }}
                         includeClusterResources: true
+                        snapshotMoveData: true
                         includedNamespaces:
                           {{- range $vms_namespace := split " " $vms_ns }}
                           {{ if not (eq $vms_namespace "") }}
