@@ -13,6 +13,30 @@ spec:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
         metadata:
+          name: check-backup-wait-for-plugin
+        spec:
+          object-templates-raw: |
+            - complianceType: mustnothave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: Backup
+                metadata:
+                  namespace: "open-cluster-management-backup"
+                  labels:
+                    cluster.open-cluster-management.io/backup-schedule-type: kubevirt
+                status:
+                  phase: WaitingForPluginOperations
+          customMessage:
+            noncompliant: |-
+              There are no acm-rho-virt-schedule backups waiting for the data upload to complete.  
+            noncompliant: |-
+              Some acm-rho-virt-schedule backups are waiting for the data upload to complete. Check the DataUpload status by running : oc get datauploads -n open-cluster-management-backup                                                                    
+          remediationAction: inform
+          severity: low                                                                         
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
           name: create-virt-backup
         spec:
           object-templates-raw: |
