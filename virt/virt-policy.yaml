@@ -27,6 +27,10 @@ spec:
 
             {{- /* skip if VM CRD is not installed  */ -}}
             {{ if $vm_crd_exists }} 
+             
+              {{- $cron_schedule := "10 */1 * * *" }}
+              {{- $ttl_schedule := "24h0m0s" }}
+              {{- $acm_schedule_owner := "" }}
 
               {{- $generateSchedule := true }}
               {{- $sch_crd_name := "schedules.velero.io" }}
@@ -64,7 +68,12 @@ spec:
                       name: {{ $acm_virt_sch_name }}
                       namespace: {{ $ns }}
                   {{ else }}
+
                     {{- $generateSchedule = true }}
+                    {{- /* get acm schedule settings */ -}}
+                    {{- $cron_schedule = $acm_sch_res.spec.schedule }}
+                    {{- $ttl_schedule = $acm_sch_res.spec.template.ttl }}
+                    {{- $acm_schedule_owner = (index $acm_sch_res.metadata.labels "cluster.open-cluster-management.io/backup-schedule-name") }}
                   {{- end }}
 
                 {{- /* ACM MCH installed, this is the hub */ -}}
@@ -101,12 +110,15 @@ spec:
                       name: {{ $acm_virt_sch_name }}
                       namespace: open-cluster-management-backup
                       labels:
+                        {{ if not (eq $acm_schedule_owner "") }}
+                        cluster.open-cluster-management.io/backup-schedule-name: {{ $acm_schedule_owner }}
+                        {{- end }}
                         cluster.open-cluster-management.io/backup-cluster: {{ fromClusterClaim "id.openshift.io" }}
                         cluster.open-cluster-management.io/backup-schedule-type: kubevirt                  
                     spec:
-                      schedule: 0 */2 * * *
+                      schedule: {{ $cron_schedule }}
                       template:
-                        ttl: 120h0m0s
+                        ttl: {{ $ttl_schedule }}
                         includeClusterResources: true
                         includedNamespaces:
                           {{- range $vms_namespace := split " " $vms_ns }}
