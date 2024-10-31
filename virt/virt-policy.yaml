@@ -1,0 +1,102 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: virt-backup
+  annotations:
+    policy.open-cluster-management.io/categories: CA Security Assessment and Authorization
+    policy.open-cluster-management.io/controls: CA-2 Security Assessments, CA-7 Continuous Monitoring
+    policy.open-cluster-management.io/standards: NIST SP 800-53
+spec:
+  disabled: false
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: create-virt-backup
+        spec:
+          object-templates-raw: |
+            {{- $ns := "open-cluster-management-backup" }}  
+            {{ $vms_ns := "" }}     
+            {{ $vms_names := "" }}      
+            {{- range $vms := (lookup "cluster.open-cluster-management.io/v1" "ManagedCluster" "" "" ).items }}
+              {{- $vms_ns = (cat $vms_ns $vms.metadata.name) }}
+              {{- $vms_names = (cat $vms_names $vms.metadata.name) }}
+            {{- end }}
+
+            {{ if and (not (eq $vms_ns "")) (not (eq $vms_names "")) }}
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: Schedule
+                metadata:
+                  name: acm-rho-virt-schedule
+                  namespace: open-cluster-management-backup
+                spec:
+                  schedule: 0 */2 * * *
+                  template:
+                    ttl: 120h0m0s
+                    includeClusterResources: true
+                    includedNamespaces:
+                      {{- range $vms_namespace := split " " $vms_ns }}
+                      {{ if not (eq $vms_namespace "") }}
+                      - {{ $vms_namespace }}
+                      {{- end }}
+                      {{- end }}
+                    orLabelSelectors:
+                      - matchExpressions:
+                          - values:
+                            {{- range $vms_name := split " " $vms_names }}
+                              {{ if not (eq $vms_name "") }}
+                            - {{ $vms_name }}
+                              {{- end }}
+                            {{- end }}
+                            key: app
+                            operator: In
+                      - matchExpressions:
+                          - values:
+                            {{- range $vms_name := split " " $vms_names }}
+                              {{ if not (eq $vms_name "") }}
+                            - {{ $vms_name }}
+                              {{- end }}
+                            {{- end }}
+                            key: kubevirt.io/domain
+                            operator: In
+            {{- end }}
+
+          remediationAction: enforce
+          severity: high   
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: virt-backup-placement
+spec:
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: local-cluster
+              operator: In
+              values:
+                - 'true'               
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: virt-backup-placement
+placementRef:
+  name: virt-backup-placement
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+subjects:
+  - name: virt-backup
+    apiGroup: policy.open-cluster-management.io
+    kind: Policy
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: global
+spec:
+  clusterSet: global
