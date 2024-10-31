@@ -102,13 +102,31 @@ spec:
                 {{- end }}
 
               {{ if and (not (eq $vms_ns " ")) (not (eq $vms_names " ")) }}
+
+                {{- range $dpas := (lookup "oadp.openshift.io/v1alpha1" "DataProtectionApplication" $ns "" ).items }}
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: oadp.openshift.io/v1alpha1
+                    kind: DataProtectionApplication
+                    metadata:
+                      name: {{ $dpas.metadata.name }}
+                      namespace: {{ $ns }}
+                    spec:
+                      configuration:
+                        velero:
+                          defaultPlugins:
+                            - csi
+                            - openshift
+                            - kubevirt
+                {{- end }}
+
                 - complianceType: musthave
                   objectDefinition:
                     apiVersion: velero.io/v1
                     kind: Schedule
                     metadata:
                       name: {{ $acm_virt_sch_name }}
-                      namespace: open-cluster-management-backup
+                      namespace: {{ $ns }}
                       labels:
                         {{ if not (eq $acm_schedule_owner "") }}
                         cluster.open-cluster-management.io/backup-schedule-name: {{ $acm_schedule_owner }}
@@ -155,9 +173,9 @@ spec:
             {{- /* VM CRD is installed */ -}}
             {{- end}}
 
-
           remediationAction: enforce
           severity: high   
+
 ---
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
