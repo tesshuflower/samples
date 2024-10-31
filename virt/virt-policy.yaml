@@ -16,12 +16,22 @@ spec:
           name: create-virt-backup
         spec:
           object-templates-raw: |
+            {{- /* ns is the namespace for the OADP deployment  */ -}}
             {{- $ns := "open-cluster-management-backup" }}  
-            {{ $vms_ns := "" }}     
-            {{ $vms_names := "" }}      
+            {{- /* vms_ns gives the list of all namespaces where VM exist  */ -}}
+            {{ $vms_ns := " " }}   
+            {{- /* vms_ns gives the list of all VM names  */ -}}  
+            {{ $vms_names := " " }}   
+
             {{- range $vms := (lookup "cluster.open-cluster-management.io/v1" "ManagedCluster" "" "" ).items }}
-              {{- $vms_ns = (cat $vms_ns $vms.metadata.name) }}
-              {{- $vms_names = (cat $vms_names $vms.metadata.name) }}
+              {{ if not (contains $vms.metadata.name $vms_ns) }}
+                {{- /* add VM namespace if not already in the vms_ns  */ -}}
+                {{- $vms_ns = (cat $vms_ns $vms.metadata.name " ") }}
+              {{- end }}
+              {{ if not (contains $vms.metadata.name $vms_names) }}
+                {{- /* add VM name if not already in the vms_names  */ -}}
+                {{- $vms_names = (cat $vms_names $vms.metadata.name " ") }}
+              {{- end }}
             {{- end }}
 
             {{ if and (not (eq $vms_ns "")) (not (eq $vms_names "")) }}
