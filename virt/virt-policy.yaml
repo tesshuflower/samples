@@ -32,7 +32,42 @@ spec:
             noncompliant: |-
               Some acm-rho-virt-schedule backups are waiting for the data upload to complete. Check the DataUpload status by running : oc get datauploads -n open-cluster-management-backup                                                                    
           remediationAction: inform
-          severity: low                                                                         
+          severity: low
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: check-backup-status-completed
+        spec:
+          object-templates-raw: |
+            {{- /* ns is the namespace for the OADP deployment  */ -}}
+            {{- $ns := "open-cluster-management-backup" }}
+            {{- $acm_virt_sch_name := "acm-rho-virt-schedule" }} 
+            {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (kubevirt)"}}
+
+            {{- $scheduleObj := (lookup "velero.io/v1" "Schedule" $ns $acm_virt_sch_name ) }}
+
+            {{- /* if acm-rho-virt-schedule exists, get the last generated backup and verify the status is Completed  */ -}}
+            {{- if eq $scheduleObj.metadata.name $acm_virt_sch_name }}
+              {{- $scheduleObjLastBckTime := ($scheduleObj.status.lastBackup) }}
+              {{- range $backupList := (lookup "velero.io/v1" "Backup" $ns "" $schedule_label).items }}
+                {{- $backupCreation := $backupList.metadata.creationTimestamp  }}
+                {{- if eq $backupCreation $scheduleObjLastBckTime }}
+
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: velero.io/v1
+                kind: Backup
+                metadata:
+                  namespace: {{ $ns }}
+                  name: {{ $backupList.metadata.name }}
+                status:
+                  phase: Completed
+                {{- end }}
+              {{- end }}
+            {{- end }}
+          remediationAction: inform
+          severity: low                                                                                                                                                  
     - objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
@@ -142,6 +177,9 @@ spec:
                             - csi
                             - openshift
                             - kubevirt
+                        nodeAgent: 
+                          enable: true 
+                          uploaderType: kopia
                 {{- end }}
 
                 - complianceType: musthave
