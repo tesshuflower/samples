@@ -246,15 +246,17 @@ metadata:
 spec:
   predicates:
     - requiredClusterSelector:
-        orLabelSelectors:
-          - matchExpressions:
-              - key: local-cluster
-                operator: In
-                values:
-                  - 'true' 
-          - matchExpressions:
-              - key: acm-virt-backup
-                operator: Exists           
+        labelSelector:
+          matchExpressions:
+            - key: 'name'
+              operator: 'In'
+              values: 
+                - 'local-cluster'
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: 'acm-virt-backup'
+              operator: 'Exists'        
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
