@@ -36,6 +36,9 @@ spec:
                   {{- $backupCreation := $backupList.metadata.creationTimestamp  }}
                   {{- if eq $backupCreation $scheduleObjLastBckTime }}
 
+                    {{- $dataupload_exists := gt (len ( lookup "velero.io/v2alpha1" "DataUpload" $ns "" ).items ) 0 }}
+
+                    {{ if $dataupload_exists }}
               - complianceType: musthave
                 objectDefinition:
                   apiVersion: velero.io/v2alpha1
@@ -46,6 +49,7 @@ spec:
                       velero.io/backup-name: {{ $backupList.metadata.name }}
                   status:
                     phase: Completed
+                     {{- end }}
 
               - complianceType: musthave
                 objectDefinition:
@@ -55,7 +59,7 @@ spec:
                     namespace: {{ $ns }}
                     name: {{ $backupList.metadata.name }}
                   status:
-                    phase: Completed
+                    phase: Completed                   
                   {{- end }}
                 {{- end }}
               {{- end }}
