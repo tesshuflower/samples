@@ -36,11 +36,8 @@ spec:
                 kind: DataUpload
                 metadata:
                   namespace: {{ $ns }}
-                  ownerReferences:
-                    - apiVersion: velero.io/v1
-                      controller: true
-                      kind: Backup
-                      name: {{ $backupList.metadata.name }}
+                  labels:
+                    velero.io/backup-name: {{ $backupList.metadata.name }}
                 status:
                   phase: Completed
 
