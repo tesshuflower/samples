@@ -78,6 +78,7 @@ spec:
               {{- $cron_schedule := "10 */1 * * *" }}
               {{- $ttl_schedule := "24h0m0s" }}
               {{- $acm_schedule_owner := "" }}
+              {{- $paused_schedule := false }}
 
               {{- $generateSchedule := true }}
               {{- $sch_crd_name := "schedules.velero.io" }}
@@ -121,6 +122,7 @@ spec:
                     {{- $cron_schedule = $acm_sch_res.spec.schedule }}
                     {{- $ttl_schedule = $acm_sch_res.spec.template.ttl }}
                     {{- $acm_schedule_owner = (index $acm_sch_res.metadata.labels "cluster.open-cluster-management.io/backup-schedule-name") }}
+                    {{- $paused_schedule := $acm_sch_res.spec.paused }}
                   {{- end }}
 
                 {{- /* ACM MCH installed, this is the hub */ -}}
@@ -184,11 +186,13 @@ spec:
                         cluster.open-cluster-management.io/backup-cluster: {{ fromClusterClaim "id.openshift.io" }}
                         cluster.open-cluster-management.io/backup-schedule-type: kubevirt                  
                     spec:
+                      paused: {{ $paused_schedule }}
                       schedule: {{ $cron_schedule }}
                       template:
                         ttl: {{ $ttl_schedule }}
                         includeClusterResources: true
                         snapshotMoveData: true
+                        defaultVolumesToFsBackup: false
                         includedNamespaces:
                           {{- range $vms_namespace := split " " $vms_ns }}
                           {{ if not (eq $vms_namespace "") }}
