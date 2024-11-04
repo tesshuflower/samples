@@ -175,14 +175,34 @@ spec:
 
               {{- /* if acm-rho-virt-schedule exists, get the last generated backup and verify the status is Completed  */ -}}
               {{- if eq $scheduleObj.metadata.name $acm_virt_sch_name }}
-                {{- $scheduleObjLastBckTime := ($scheduleObj.status.lastBackup) }}
-                {{- range $backupList := (lookup "velero.io/v1" "Backup" $ns "" $schedule_label).items }}
-                  {{- $backupCreation := $backupList.metadata.creationTimestamp  }}
-                  {{- if eq $backupCreation $scheduleObjLastBckTime }}
 
-                    {{- $dataupload_exists := gt (len ( lookup "velero.io/v2alpha1" "DataUpload" $ns "" ).items ) 0 }}
+                {{- $scheduleObjLastBckTime := "" }}
+                {{ if $scheduleObj.status }}
+                  {{- $scheduleObjLastBckTime = (index $scheduleObj.status "lastBackup") }}
+                {{- end }}
 
-                    {{ if $dataupload_exists }}
+                {{ if (eq $scheduleObjLastBckTime "") }}
+
+              - complianceType: musthave
+                objectDefinition:
+                  apiVersion: velero.io/v1
+                  kind: Schedule
+                  metadata:
+                    namespace: {{ $ns }}
+                    name: {{ $acm_virt_sch_name }}
+                    labels:
+                      cluster.open-cluster-management.io/backup-schedule-type: kubevirt 
+                  status:
+                    phase: Enabled
+                    lastBackup: "some value"
+
+                {{ else }}
+                  {{- range $backupList := (lookup "velero.io/v1" "Backup" $ns "" $schedule_label).items }}
+                    {{- $backupCreation := $backupList.metadata.creationTimestamp  }}
+                    {{ if eq $backupCreation $scheduleObjLastBckTime }}
+
+                      {{- $dataupload_exists := gt (len ( lookup "velero.io/v2alpha1" "DataUpload" $ns "" ).items ) 0 }}
+                      {{ if $dataupload_exists }}
               - complianceType: musthave
                 objectDefinition:
                   apiVersion: velero.io/v2alpha1
@@ -193,7 +213,7 @@ spec:
                       velero.io/backup-name: {{ $backupList.metadata.name }}
                   status:
                     phase: Completed
-                     {{- end }}
+                       {{- end }}
 
               - complianceType: musthave
                 objectDefinition:
@@ -202,8 +222,13 @@ spec:
                   metadata:
                     namespace: {{ $ns }}
                     name: {{ $backupList.metadata.name }}
+                    labels:
+                      cluster.open-cluster-management.io/backup-cluster: {{ fromClusterClaim "id.openshift.io" }}
+                      cluster.open-cluster-management.io/backup-schedule-type: kubevirt
+                      velero.io/schedule-name: {{ $scheduleObj.metadata.name }}
                   status:
-                    phase: Completed                   
+                    phase: Completed
+                    {{- end }}
                   {{- end }}
                 {{- end }}
               {{- end }}
