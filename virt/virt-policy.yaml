@@ -82,7 +82,6 @@ spec:
             {{- /* ns is the namespace for the OADP deployment  */ -}}
             {{- $ns := "open-cluster-management-backup" }}
 
-
             {{- $acm_virt_sch_name := "acm-rho-virt-schedule" }} 
             {{- $schedule_label := "cluster.open-cluster-management.io/backup-schedule-type, cluster.open-cluster-management.io/backup-schedule-type in (kubevirt)"}}
 
@@ -151,6 +150,7 @@ spec:
               {{- end }}
             {{- end }}
           remediationAction: enforce
+          pruneObjectBehavior: DeleteIfCreated
           severity: high 
 
     - objectDefinition:
@@ -406,8 +406,9 @@ spec:
 
             {{- /* VM CRD is installed */ -}}
             {{- end}}
-
+          pruneObjectBehavior: DeleteIfCreated
           remediationAction: enforce
+          pruneObjectBehavior: DeleteIfCreated
           severity: high   
 
 ---
