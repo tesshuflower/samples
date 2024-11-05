@@ -1,0 +1,39 @@
+#
+# This configmap is used by all three policies
+# and specifies the configuration required to install velero, backup or restore
+#
+# This config is set to use snapshotVolumes for backing up PVs; this option works only if 
+# your backup and restore clusters use the same StorageClass 
+# and the restore cluster can access the region/location where the volume snapshot are stored
+# 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: acm-virt-config
+data:
+
+  ###### Configuration for the acm-virt-policy policy ###
+  ########################################################
+
+  # backupNS is the ns where velero/oadp is installed on the cluster
+  backupNS: acm-app-backup 
+  channel: stable-1.1
+  subscriptionName: redhat-oadp-operator
+
+# define cloud-credential used to connect to the storage location, base64 encoded string
+# for example, for an aws storage location, the credential is in this format
+#
+# [default]
+# aws_access_key_id=<id>
+# aws_secret_access_key=<key>
+#
+  dpaAwsBackupCloudCredentials: W2RlZmF1bHRdCmF3c19hY2Nlc3Nfa2V5X2lkPTxpZD4KYXdzX3NlY3JldF9hY2Nlc3Nfa2V5PTxrZXk+
+
+
+## DPA resource configuration
+#
+  #DPA resource name; use the same name for all hubs, the PV cannot be restored if 
+  # the BackupStorageLocation resource doesn't have the same name
+  # on both backup and restore cluster 
+  dpaName: dpa
+  dpaBackupCloudCredentialsName: cloud-credentials

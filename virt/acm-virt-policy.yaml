@@ -1,7 +1,7 @@
 apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
 metadata:
-  name: virt-backup
+  name: acm-virt-backup
   annotations:
     policy.open-cluster-management.io/categories: CA Security Assessment and Authorization
     policy.open-cluster-management.io/controls: CA-2 Security Assessments, CA-7 Continuous Monitoring
@@ -201,14 +201,17 @@ spec:
                     {{- $backupCreation := $backupList.metadata.creationTimestamp  }}
                     {{ if eq $backupCreation $scheduleObjLastBckTime }}
 
-                      {{- $dataupload_exists := gt (len ( lookup "velero.io/v2alpha1" "DataUpload" $ns "" ).items ) 0 }}
-                      {{ if $dataupload_exists }}
+                      {{- $data_upload_label := "velero.io/backup-name, velero.io/backup-name in (aa)" }}
+                      {{- $data_upload_label = replace "aa" $backupList.metadata.name $data_upload_label }}
+                      
+                      {{- range $dataupload_obj :=  (lookup "velero.io/v2alpha1" "DataUpload" $ns "" $data_upload_label ).items }}
               - complianceType: musthave
                 objectDefinition:
                   apiVersion: velero.io/v2alpha1
                   kind: DataUpload
                   metadata:
                     namespace: {{ $ns }}
+                    name: {{ $dataupload_obj.metadata.name }}
                     labels:
                       velero.io/backup-name: {{ $backupList.metadata.name }}
                   status:
@@ -440,7 +443,7 @@ spec:
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
-  name: virt-backup-placement
+  name: acm-virt-backup-placement
 spec:
   predicates:
     - requiredClusterSelector:
@@ -459,13 +462,13 @@ spec:
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
 metadata:
-  name: virt-backup-placement
+  name: acm-virt-backup-placement
 placementRef:
-  name: virt-backup-placement
+  name: acm-virt-backup-placement
   apiGroup: cluster.open-cluster-management.io
   kind: Placement
 subjects:
-  - name: virt-backup
+  - name: acm-virt-backup
     apiGroup: policy.open-cluster-management.io
     kind: Policy
 ---
