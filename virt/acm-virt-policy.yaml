@@ -47,18 +47,10 @@ spec:
                   {{- $is_hub := eq $acm_crd.metadata.name  $acm_crd_name }}
 
                   {{ if not $is_hub }}
-                    {{hub $configMap := (lookup "v1" "ConfigMap" "" "acm-virt-config") hub}}
-                    {{hub $configMapExists := eq $configMap.metadata.name "acm-virt-config" hub}}
-                    {{ if {{hub $configMapExists hub}} }}
-                      {{- $ns = "{{hub $configMap.data.backupNS hub}}" }}
-                    {{- end }}
-                - complianceType: musthave
-                  objectDefinition:
-                    apiVersion: v1
-                    kind: ConfigMap
-                    metadata:
-                      name: "acm-virt-config"
-                      namespace: {{ $ns }}
+                  {{ if not $is_hub }}
+                    {{hub $configMap := (lookup "v1" "ConfigMap" "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config"))) hub}}
+                    {{- $ns = "{{hub $configMap.data.backupNS hub}}" }}
+                  {{- end }}
 
                 - complianceType: musthave
                   objectDefinition:
@@ -306,14 +298,11 @@ spec:
                 {{ if not $is_hub }}
                   {{- /* always generate the schedule for managed clusters */ -}}
                   {{- $should_run_schedule = true }}
-                  {{hub $configMap := (lookup "v1" "ConfigMap" "" "acm-virt-config") hub}}
-                  {{hub $configMapExists := eq $configMap.metadata.name "acm-virt-config" hub}}
-                  {{ if {{hub $configMapExists hub}} }}
-                    {{- $ns = "{{hub $configMap.data.backupNS hub}}" }}
-                    {{- $cron_schedule = "{{hub $configMap.data.scheduleCron hub}}" }}
-                    {{- $ttl_schedule = "{{hub $configMap.data.scheduleTTL hub}}" }}
-                    {{- $paused_schedule = "{{hub $configMap.data.schedulePaused hub}}" }}
-                  {{- end }}
+                  {{hub $configMap := (lookup "v1" "ConfigMap" "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config"))) hub}}
+                  {{- $ns = "{{hub $configMap.data.backupNS hub}}" }}
+                  {{- $cron_schedule = "{{hub $configMap.data.scheduleCron hub}}" }}
+                  {{- $ttl_schedule = "{{hub $configMap.data.scheduleTTL hub}}" }}
+                  {{- $paused_schedule = "{{hub $configMap.data.schedulePaused hub}}" }}
 
                 {{ else}}
                   {{- /* ACM is installed, this is a hub cluster */ -}}
