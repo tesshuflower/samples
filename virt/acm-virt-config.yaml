@@ -17,8 +17,7 @@ data:
 
   # backupNS is the ns where velero/oadp is installed on the cluster
   backupNS: acm-app-backup 
-  channel: stable-1.1
-  subscriptionName: redhat-oadp-operator
+  channel: stable-1.4
 
 # define cloud-credential used to connect to the storage location, base64 encoded string
 # for example, for an aws storage location, the credential is in this format
