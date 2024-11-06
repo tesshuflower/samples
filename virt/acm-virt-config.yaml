@@ -21,6 +21,8 @@ data:
   scheduleTTL: 100h
   scheduleCron: "10 */1 * * *"
   schedulePaused: false
+  credentials_hub_secret_name: "hub-secret"
+  credentials_name: "cloud-credentials"
 
 # define cloud-credential used to connect to the storage location, base64 encoded string
 # for example, for an aws storage location, the credential is in this format
