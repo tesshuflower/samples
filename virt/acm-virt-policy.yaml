@@ -147,37 +147,6 @@ spec:
                       source: {{ $oadp_operator_source }}
                       sourceNamespace: {{ $oadp_source_ns }}
 
-                - complianceType: musthave
-                  objectDefinition:
-                    apiVersion: oadp.openshift.io/v1alpha1
-                    kind: DataProtectionApplication
-                    metadata:
-                      namespace: {{ $ns }}
-                      name: {{ $dpa_name }}
-                    spec:
-                      backupLocations:
-                        - velero:
-                            config:
-                              profile: default
-                              region: us-east-1
-                            credential:
-                              key: cloud
-                              name: cloud-credentials
-                            objectStorage:
-                              bucket: aa
-                              prefix: hub-a
-                            default: true
-                            provider: aws
-                      configuration:
-                        velero:
-                          defaultPlugins:
-                            - csi
-                            - openshift
-                            - kubevirt
-                        nodeAgent:
-                          enable: true
-                          uploaderType: kopia
-
               {{- end }}
             {{- end }}
           remediationAction: enforce
@@ -321,7 +290,7 @@ spec:
                 {{hub $configMap := (lookup "v1" "ConfigMap" "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config"))) hub}}
                 {{- $ns = "{{hub $configMap.data.backupNS hub}}" }}
 
-                - complianceType: mustonlyhave
+                - complianceType: musthave
                   objectDefinition:
                     apiVersion: v1
                     kind: Secret
