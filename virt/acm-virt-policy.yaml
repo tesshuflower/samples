@@ -49,7 +49,6 @@ spec:
                   {{ if not $is_hub }}
                     {{hub $configMap := (lookup "v1" "ConfigMap" "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config"))) hub}}
                     {{- $ns = "{{hub $configMap.data.backupNS hub}}" }}
-                    {{- $dpa_name := "{{hub $configMap.data.dpa_hub_name hub}}" }}
 
                 - complianceType: musthave
                   objectDefinition:
@@ -57,7 +56,7 @@ spec:
                     kind: DataProtectionApplication
                     metadata:
                       namespace: {{ $ns }}
-                      name: {{ $dpa_name }}
+                      name: {{hub $configMap.data.dpa_name hub}}
                     spec:
                       configuration:
                         velero:
@@ -113,7 +112,6 @@ spec:
                   {{hub $configMap := (lookup "v1" "ConfigMap" "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config"))) hub}}
                   {{- $oadp_channel = "{{hub $configMap.data.channel hub}}" }}
                   {{- $ns = "{{hub $configMap.data.backupNS hub}}" }}
-                  {{- $dpa_name := "{{hub $configMap.data.dpa_hub_name hub}}" }}
                   {{- $credentialsName := "{{hub $configMap.data.credentials_name hub}}" }}
 
                 - complianceType: musthave
@@ -156,6 +154,15 @@ spec:
                       name: {{ $oadp_subs_name }}
                       source: {{ $oadp_operator_source }}
                       sourceNamespace: {{ $oadp_source_ns }}
+
+                - complianceType: mustonlyhave
+                  objectDefinition:
+                    apiVersion: oadp.openshift.io/v1alpha1
+                    kind: DataProtectionApplication
+                    metadata:
+                      name: {{hub $configMap.data.dpa_name hub}}
+                      namespace: {{ $ns }}
+                    spec: '{{hub $configMap.data.dpa_spec | toLiteral hub}}'
 
               {{- end }}
             {{- end }}
@@ -371,26 +378,6 @@ spec:
                 {{- end }}
 
               {{ if and (not (eq $vms_ns " ")) (not (eq $vms_names " ")) }}
-
-                {{- range $dpas := (lookup "oadp.openshift.io/v1alpha1" "DataProtectionApplication" $ns "" ).items }}
-                - complianceType: musthave
-                  objectDefinition:
-                    apiVersion: oadp.openshift.io/v1alpha1
-                    kind: DataProtectionApplication
-                    metadata:
-                      name: {{ $dpas.metadata.name }}
-                      namespace: {{ $ns }}
-                    spec:
-                      configuration:
-                        velero:
-                          defaultPlugins:
-                            - csi
-                            - openshift
-                            - kubevirt
-                        nodeAgent:
-                          enable: true
-                          uploaderType: kopia
-                {{- end }}
 
                 - complianceType: musthave
                   objectDefinition:

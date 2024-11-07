@@ -20,24 +20,54 @@ data:
   channel: stable-1.4
   scheduleTTL: 100h
   scheduleCron: "10 */1 * * *"
-  schedulePaused: false
+  schedulePaused: "false"
   credentials_hub_secret_name: "hub-secret"
   credentials_name: "cloud-credentials"
-
-# define cloud-credential used to connect to the storage location, base64 encoded string
-# for example, for an aws storage location, the credential is in this format
-#
-# [default]
-# aws_access_key_id=<id>
-# aws_secret_access_key=<key>
-#
-  dpaAwsBackupCloudCredentials: W2RlZmF1bHRdCmF3c19hY2Nlc3Nfa2V5X2lkPTxpZD4KYXdzX3NlY3JldF9hY2Nlc3Nfa2V5PTxrZXk+
-
-
-## DPA resource configuration
-#
-  #DPA resource name; use the same name for all hubs, the PV cannot be restored if 
-  # the BackupStorageLocation resource doesn't have the same name
-  # on both backup and restore cluster 
-  dpaName: dpa
-  dpaBackupCloudCredentialsName: cloud-credentials
+  dpa_name: dpa-hub-a
+  dpa_spec: "{
+  \"backupLocations\": [
+    {
+      \"velero\": {
+        \"config\": {
+          \"profile\": \"default\",
+          \"region\": \"us-east-1\"
+        },
+        \"credential\": {
+          \"key\": \"cloud\",
+          \"name\": \"cloud-credentials\"
+        },
+        \"default\": true,
+        \"objectStorage\": {
+          \"bucket\": \"vb-velero-backup\",
+          \"prefix\": \"hub-a\"
+        },
+        \"provider\": \"aws\"
+      }
+    }
+  ],
+  \"configuration\": {
+    \"restic\": {
+      \"enable\": false
+    },
+    \"velero\": {
+      \"defaultPlugins\": [
+        \"csi\",
+        \"kubevirt\",
+        \"openshift\",
+        \"aws\"
+      ],
+      \"podConfig\": {
+        \"resourceAllocations\": {
+          \"limits\": {
+            \"cpu\": \"2\",
+            \"memory\": \"1Gi\"
+          },
+          \"requests\": {
+            \"cpu\": \"500m\",
+            \"memory\": \"256Mi\"
+          }
+        }
+      }
+    }
+  },
+}"
