@@ -114,6 +114,7 @@ spec:
                   {{- $oadp_channel = "{{hub $configMap.data.channel hub}}" }}
                   {{- $ns = "{{hub $configMap.data.backupNS hub}}" }}
                   {{- $dpa_name := "{{hub $configMap.data.dpa_hub_name hub}}" }}
+                  {{- $credentialsName := "{{hub $configMap.data.credentials_name hub}}" }}
 
                 - complianceType: musthave
                   objectDefinition:
@@ -121,6 +122,15 @@ spec:
                     kind: Namespace
                     metadata:
                       name: {{ $ns }}
+
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Secret
+                    metadata:
+                      name: {{ $credentialsName }}
+                      namespace: {{ $ns }}
+                    data: '{{hub copySecretData "" $configMap.data.credentials_hub_secret_name hub}}'
 
                 - complianceType: musthave
                   objectDefinition:
@@ -285,21 +295,6 @@ spec:
               {{- $dpa_crd := lookup "apiextensions.k8s.io/v1" "CustomResourceDefinition" "" "dataprotectionapplications.oadp.openshift.io"  }}
               {{- $dpa_crd_exists := eq $dpa_crd.metadata.name  $dpa_crd_name }}
 
-              {{ if not $is_hub }}
-                {{- /* get install config from hub configmap defined using the managed cluster acm-virt-config label annotation  */ -}}
-                {{hub $configMap := (lookup "v1" "ConfigMap" "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config"))) hub}}
-                {{- $ns = "{{hub $configMap.data.backupNS hub}}" }}
-
-                - complianceType: musthave
-                  objectDefinition:
-                    apiVersion: v1
-                    kind: Secret
-                    metadata:
-                      name: {{hub $configMap.data.credentials_name hub}}
-                      namespace: {{hub $configMap.data.backupNS hub}}
-                    data: '{{hub copySecretData "" $configMap.data.credentials_hub_secret_name hub}}'
-              {{- end }}
-
               {{- /* check if velero is installed  */ -}}
               {{- $sch_crd_name := "schedules.velero.io" }}
               {{- $sch_crd := lookup "apiextensions.k8s.io/v1" "CustomResourceDefinition" "" $sch_crd_name  }}
@@ -311,6 +306,8 @@ spec:
                 {{- $should_run_schedule := false }}
                 {{ if not $is_hub }}
                   {{- /* always generate the schedule for managed clusters */ -}}
+                  {{hub $configMap := (lookup "v1" "ConfigMap" "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config"))) hub}}
+                  {{- $ns = "{{hub $configMap.data.backupNS hub}}" }}
                   {{- $should_run_schedule = true }}
                   {{- $cron_schedule = "{{hub $configMap.data.scheduleCron hub}}" }}
                   {{- $ttl_schedule = "{{hub $configMap.data.scheduleTTL hub}}" }}
