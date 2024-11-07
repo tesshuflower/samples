@@ -46,13 +46,15 @@ data:
     }
   ],
   \"configuration\": {
-    \"restic\": {
-      \"enable\": false
+    \"nodeAgent\": {
+      \"enable\": true,
+      \"uploaderType\": \"kopia\"
     },
     \"velero\": {
       \"defaultPlugins\": [
-        \"kubevirt\",
+        \"csi\",       
         \"openshift\",
+        \"kubevirt\",
         \"aws\"
       ],
       \"podConfig\": {
