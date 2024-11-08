@@ -46,9 +46,19 @@ spec:
                   {{- $acm_crd := lookup "apiextensions.k8s.io/v1" "CustomResourceDefinition" "" $acm_crd_name  }}
                   {{- $is_hub := eq $acm_crd.metadata.name  $acm_crd_name }}
 
+                  {{hub $configMap := (lookup "v1" "ConfigMap" "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config"))) hub}}
+                  {{- $dpa_name := "" }}
                   {{ if not $is_hub }}
-                    {{hub $configMap := (lookup "v1" "ConfigMap" "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config"))) hub}}
                     {{- $ns = "{{hub $configMap.data.backupNS hub}}" }}
+                    {{- $dpa_name = "{{hub $configMap.data.dpa_name hub}}" }}
+                  {{ else }}
+                    {{- $is_hub := eq $acm_crd.metadata.name  $acm_crd_name }}
+                    {{- /* get DPA name  */ -}}
+                    {{- $acm_crd_name := "multiclusterhubs.operator.open-cluster-management.io" }}
+                    {{- range $dpa_objs := (lookup "oadp.openshift.io/v1alpha1" "DataProtectionApplication" "" $acm_crd_name).items  }}
+                      {{- $dpa_name = $dpa_objs.metadata.name }}
+                    {{- end}}
+                  {{- end }}
 
                 - complianceType: musthave
                   objectDefinition:
@@ -56,7 +66,7 @@ spec:
                     kind: DataProtectionApplication
                     metadata:
                       namespace: {{ $ns }}
-                      name: {{hub $configMap.data.dpa_name hub}}
+                      name: {{ $dpa_name }}
                     spec:
                       configuration:
                         velero:
@@ -70,7 +80,6 @@ spec:
                     {{- end}}
                   {{- end }}
                 {{- end }}
-              {{- end }}
           remediationAction: inform
           severity: high
 
@@ -310,15 +319,15 @@ spec:
               {{ if ($sch_crd_exists) }}
                 {{- /* Velero Schedule CRD is installed */ -}}
 
+                {{hub $configMap := (lookup "v1" "ConfigMap" "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config"))) hub}}
+                {{- $cron_schedule = "{{hub $configMap.data.scheduleCron hub}}" }}
+                {{- $ttl_schedule = "{{hub $configMap.data.scheduleTTL hub}}" }}
+                {{- $paused_schedule = "{{hub $configMap.data.schedulePaused hub}}" }}
                 {{- $should_run_schedule := false }}
                 {{ if not $is_hub }}
                   {{- /* always generate the schedule for managed clusters */ -}}
-                  {{hub $configMap := (lookup "v1" "ConfigMap" "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config"))) hub}}
                   {{- $ns = "{{hub $configMap.data.backupNS hub}}" }}
                   {{- $should_run_schedule = true }}
-                  {{- $cron_schedule = "{{hub $configMap.data.scheduleCron hub}}" }}
-                  {{- $ttl_schedule = "{{hub $configMap.data.scheduleTTL hub}}" }}
-                  {{- $paused_schedule = "{{hub $configMap.data.schedulePaused hub}}" }}
 
                 {{ else}}
                   {{- /* ACM is installed, this is a hub cluster */ -}}
@@ -330,7 +339,7 @@ spec:
                   {{- $acm_sch_res := lookup "velero.io/v1" "Schedule" $ns $acm_schedule_name  }}
                   {{- $acm_sch_res_exists := eq $acm_sch_res.metadata.name  $acm_schedule_name }}
                   {{- /* ACM hub backup not running so don't generate the vm backup; delete it one exists */ -}}
-                  {{- $should_run_schedule = $acm_sch_res_exists }}
+                  {{- $should_run_schedule = or $should_run_schedule $acm_sch_res_exists }}
                 {{- end}}
 
                 {{ if not $should_run_schedule }}
@@ -346,10 +355,7 @@ spec:
                    {{ if $is_hub }}
                     {{- /* get acm schedule settings */ -}}
                     {{- $acm_sch_res := lookup "velero.io/v1" "Schedule" $ns "acm-resources-schedule"  }}
-                    {{- $cron_schedule = $acm_sch_res.spec.schedule }}
-                    {{- $ttl_schedule = $acm_sch_res.spec.template.ttl }}
                     {{- $acm_schedule_owner = (index $acm_sch_res.metadata.labels "cluster.open-cluster-management.io/backup-schedule-name") }}
-                    {{- $paused_schedule := $acm_sch_res.spec.paused }}
                   {{- /* ACM MCH installed, this is the hub */ -}}
                   {{- end }}
 
@@ -445,13 +451,6 @@ metadata:
   name: acm-virt-backup-placement
 spec:
   predicates:
-    - requiredClusterSelector:
-        labelSelector:
-          matchExpressions:
-            - key: 'name'
-              operator: 'In'
-              values: 
-                - 'local-cluster'
     - requiredClusterSelector:
         labelSelector:
           matchExpressions:
