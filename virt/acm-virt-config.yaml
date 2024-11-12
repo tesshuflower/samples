@@ -16,14 +16,14 @@ data:
   ########################################################
 
   # backupNS is the ns where velero/oadp is installed on the cluster
-  backupNS: acm-app-backup
-  channel: stable-1.3
-  scheduleTTL: 100h
+  backupNS: open-cluster-management-backup
+  channel: stable-1.4
+  scheduleTTL: 24h
   scheduleCron: "0 */3 * * *"
   schedulePaused: "false"
   credentials_hub_secret_name: "hub-secret"
   credentials_name: "cloud-credentials"
-  dpa_name: dpa-hub-a
+  dpa_name: dpa-hub
   dpa_spec: "{
   \"backupLocations\": [
     {
