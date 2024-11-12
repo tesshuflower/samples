@@ -21,6 +21,8 @@ data:
   scheduleTTL: 24h
   scheduleCron: "0 */3 * * *"
   schedulePaused: "false"
+  # credentials_hub_secret_name is the name of the Secret resource used by the OADP DPA resource to connect to the storage location
+  # hub-secret must be a Secret available under the acm-virt-config namespace. It will be copied over to the backup cluster by the policy
   credentials_hub_secret_name: "hub-secret"
   credentials_name: "cloud-credentials"
   dpa_name: dpa-hub
