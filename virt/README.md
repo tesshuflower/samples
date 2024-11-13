@@ -20,6 +20,12 @@ How this works:
   5. The Policy checks the status of the velero Backup and DataUpload resources and reports on violations.
   6. When uninstalled, the Policy prunes all resources created by the Policy.
 
+<b>Note:</b>
+If the cluster where the VM's are running is the hub cluster then 
+- the OADP ns is fixed to `open-cluster-management-backup` since this is the namespace where OADP is installed when the hub backup is enabled.
+- the OADP is not installed by the Policy, it waits for the backup operator to be enabled and to install the OADP as per ACM version
+- DPA or Velero secret resource are not created by the Policy, the Policy just informs on missing resources. The Policy will update the DPA with the OADP required config in order to backup the VM data but leaves the other settings unchanged.
+- The VM schedule is not created unless there is an ACM hub BackupSchedule running.
 
 Velero schedule sample, with 3 virtualmachines.kubevirt.io resources found on the managed cluster, `vm-1` in `vm-1-ns`, `vm-2` and `vm-3` in `default`:
 
