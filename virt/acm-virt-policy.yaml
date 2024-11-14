@@ -385,7 +385,7 @@ spec:
 
               {{ if and (not (eq $vms_ns " ")) (not (eq $vms_names " ")) }}
 
-                - complianceType: musthave
+                - complianceType: mustonlyhave
                   objectDefinition:
                     apiVersion: velero.io/v1
                     kind: Schedule
@@ -401,6 +401,7 @@ spec:
                     spec:
                       paused: {{ $paused_schedule }}
                       schedule: {{ $cron_schedule }}
+                      skipImmediately: false
                       template:
                         ttl: {{ $ttl_schedule }}
                         includeClusterResources: true
