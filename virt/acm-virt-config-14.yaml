@@ -1,15 +1,7 @@
-#
-# This configmap is used by all three policies
-# and specifies the configuration required to install velero, backup or restore
-#
-# This config is set to use snapshotVolumes for backing up PVs; this option works only if 
-# your backup and restore clusters use the same StorageClass 
-# and the restore cluster can access the region/location where the volume snapshot are stored
-# 
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: acm-virt-config
+  name: acm-virt-config-14
 data:
 
   ###### Configuration for the acm-virt-policy policy ###

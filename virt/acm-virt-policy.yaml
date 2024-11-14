@@ -118,10 +118,9 @@ spec:
                   {{- $oadp_operator_source := "redhat-operators" }}
                   {{- $oadp_source_ns := "openshift-marketplace" }}
 
-                  {{hub $configMap := (lookup "v1" "ConfigMap" "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config"))) hub}}
-                  {{- $oadp_channel = "{{hub $configMap.data.channel hub}}" }}
-                  {{- $ns = "{{hub $configMap.data.backupNS hub}}" }}
-                  {{- $credentialsName := "{{hub $configMap.data.credentials_name hub}}" }}
+                  {{- $oadp_channel = "{{hub fromConfigMap "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config")) "channel" hub}}" }}
+                  {{- $ns = "{{hub fromConfigMap "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config")) "backupNS" hub}}" }}
+                  {{- $credentialsName := "{{hub fromConfigMap "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config")) "credentials_name" hub}}" }}
 
                 - complianceType: musthave
                   objectDefinition:
@@ -137,7 +136,7 @@ spec:
                     metadata:
                       name: {{ $credentialsName }}
                       namespace: {{ $ns }}
-                    data: '{{hub copySecretData "" $configMap.data.credentials_hub_secret_name hub}}'
+                    data: '{{hub copySecretData "" (fromConfigMap "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config")) "credentials_hub_secret_name") hub}}'
 
                 - complianceType: musthave
                   objectDefinition:
@@ -169,9 +168,9 @@ spec:
                     apiVersion: oadp.openshift.io/v1alpha1
                     kind: DataProtectionApplication
                     metadata:
-                      name: {{hub $configMap.data.dpa_name hub}}
+                      name: {{hub fromConfigMap "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config")) "dpa_name" hub}}
                       namespace: {{ $ns }}
-                    spec: '{{hub $configMap.data.dpa_spec | toLiteral hub}}'
+                    spec: '{{hub (fromConfigMap "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config")) "dpa_spec") | toLiteral hub}}'
 
               {{- end }}
             {{- end }}
