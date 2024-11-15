@@ -16,6 +16,9 @@ data:
   credentials_hub_secret_name: "hub-secret"
   credentials_name: "cloud-credentials"
   dpa_name: dpa-cls
+  # use backup_label_name if you want to backup a subset of VMs - only VMs with the backup_label_name label will be backed up
+  # if backup_label_name is "" all VMs are backed up
+  backup_label_name: ""
   dpa_spec: "{
   \"backupLocations\": [
     {

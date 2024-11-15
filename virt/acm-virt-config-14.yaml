@@ -17,6 +17,9 @@ data:
   # hub-secret must be a Secret available under the acm-virt-config namespace. It will be copied over to the backup cluster by the policy
   credentials_hub_secret_name: "hub-secret"
   credentials_name: "cloud-credentials"
+  # use backup_label_name if you want to backup a subset of VMs - only VMs with the backup_label_name label will be backed up
+  # if backup_label_name is "" all VMs are backed up
+  backup_label_name: ""
   dpa_name: dpa-hub
   dpa_spec: "{
   \"backupLocations\": [

@@ -13,6 +13,9 @@ How this works:
   3. The user applies on ManagedCluster `cls` this label : acm-virt-config=acm-virt-config13.yaml 
 
 - As soon as the `acm-virt-config` label is set on the ManagedCluster `cls` resource, the `acm-virt-backup` policy is placed on the `cls` managed cluster.
+
+The Policy looks for `kubevirt.io.VirtualMachine` on the cluster. It only gors to the next steps if such resources are found. All VirtualMachine are being backed up using one schedule, named acm-rho-virt-schedule. If you want to backup only a subset of the VM's , use the   `backup_label_name` property on the ConfigMap to specify what label should have the VM's to be backed up. For example, is you want to backup only VM's with the label 'backup-vm', add this to  the VM ( the value can be anything , as long as the VM has the backup-vm label it will be backed up).
+
   1. The Policy uses the `acm-virt-config13.yaml` ConfigMap to read the user configuration, such as OADP version to be installed, namespace name for the OADP version, backup storage location, velero secret, backup schedule cron job
   2. The Policy copies over on the managed cluster the velero secret `hub-secret` and story it under a Secret with a name as defined by the `credentials_name` ConfigMap value
   3. The Policy installs, if not already installed, OADP at specified version and creates the DPA resource using the `acm-virt-config13.yaml` ConfigMap `dpa_spec` property (updates DPA is already created).

@@ -28,7 +28,7 @@ spec:
             {{ if $vm_crd_exists }}
 
               {{- /* check if there are VM instances  */ -}}
-              {{- $vms := (lookup "kubevirt.io/v1" "VirtualMachine" "" "" ).items }}
+              {{- $vms := (lookup "kubevirt.io/v1" "VirtualMachine" "" "" "{{hub fromConfigMap "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config")) "backup_label_name" hub}}").items }}
               {{ if gt (len ($vms)) 0  }}
 
                 {{- /* check if OADP CRD is installed  */ -}}
@@ -110,7 +110,7 @@ spec:
             {{ if and $vm_crd_exists (not $is_hub) }}
 
               {{- /* check if there are VM instances  */ -}}
-              {{ if gt (len ((lookup "kubevirt.io/v1" "VirtualMachine" "" "" ).items)) 0  }}
+              {{ if gt (len ((lookup "kubevirt.io/v1" "VirtualMachine" "" "" "{{hub fromConfigMap "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config")) "backup_label_name" hub}}").items)) 0  }}
 
                   {{- $oadp_channel := "stable-1.4" }}
                   {{- $oadp_install_plan_approval := "Automatic" }}
@@ -286,14 +286,22 @@ spec:
 
             {{- /* if vm CRD is installed check if there are VM instances  */ -}}
             {{ if $vm_crd_exists }}
-              {{- $vms = (lookup "kubevirt.io/v1" "VirtualMachine" "" "" ).items }}
+              {{- $vms = (lookup "kubevirt.io/v1" "VirtualMachine" "" "" "{{hub fromConfigMap "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config")) "backup_label_name" hub}}").items }}
               {{- $vms_inst_exists = gt (len ($vms)) 0  }}
             {{- end }}
 
             {{- $generateSchedule := $vms_inst_exists }}
 
             {{- /* if there are any vm instances  */ -}}
-            {{ if $vms_inst_exists }}
+            {{ if not $vms_inst_exists }}
+                - complianceType: mustnothave
+                  objectDefinition:
+                    apiVersion: velero.io/v1
+                    kind: Schedule
+                    metadata:
+                      name: {{ $acm_virt_sch_name }}
+                      namespace: {{ $ns }}
+            {{ else }}
 
               {{- $cron_schedule := "10 */1 * * *" }}
               {{- $ttl_schedule := "24h0m0s" }}
@@ -370,7 +378,7 @@ spec:
                 {{- /* vms_ns gives the list of all VM names  */ -}}
                 {{ $vms_names := " " }}
 
-                {{- range $vms := (lookup "kubevirt.io/v1" "VirtualMachine" "" "" ).items }}
+                {{- range $vms := (lookup "kubevirt.io/v1" "VirtualMachine" "" "" "{{hub fromConfigMap "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config")) "backup_label_name" hub}}").items }}
 
                   {{ if not (contains $vms.metadata.name $vms_ns) }}
                     {{- /* add VM namespace if not already in the vms_ns  */ -}}
