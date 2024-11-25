@@ -263,7 +263,7 @@ spec:
             {{- end }}
 
           remediationAction: inform
-          severity: low                                                                                                                                                  
+          severity: low
     - objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
@@ -274,6 +274,7 @@ spec:
             {{- /* ns is the namespace for the OADP deployment  */ -}}
             {{- $ns := "open-cluster-management-backup" }}
             {{- $acm_virt_sch_name := "acm-rho-virt-schedule" }}
+            {{- $acm_virt_sch_name_daily := "acm-rho-virt-schedule-daily" }}
 
             {{- /* check if VM CRD is not installed  */ -}}
             {{- $vm_crd_name := "virtualmachines.kubevirt.io" }}
@@ -283,17 +284,19 @@ spec:
             {{- /* true if there are any VM instances  */ -}}
             {{- $vms_inst_exists := false  }}
             {{- $vms := "" }}
+            {{- $vms_daily := "" }}
 
             {{- /* if vm CRD is installed check if there are VM instances  */ -}}
             {{ if $vm_crd_exists }}
               {{- $vms = (lookup "kubevirt.io/v1" "VirtualMachine" "" "" "{{hub fromConfigMap "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config")) "backup_label_name" hub}}").items }}
+              {{- $vms_daily = (lookup "kubevirt.io/v1" "VirtualMachine" "" "" "{{hub fromConfigMap "" (printf "%s" (index .ManagedClusterLabels "acm-virt-config")) "backup_label_name" hub}}=daily").items }}
               {{- $vms_inst_exists = gt (len ($vms)) 0  }}
             {{- end }}
 
             {{- $generateSchedule := $vms_inst_exists }}
 
             {{- /* if there are any vm instances  */ -}}
-            {{ if not $vms_inst_exists }}
+            {{ if not $generateSchedule }}
                 - complianceType: mustnothave
                   objectDefinition:
                     apiVersion: velero.io/v1
@@ -301,8 +304,10 @@ spec:
                     metadata:
                       name: {{ $acm_virt_sch_name }}
                       namespace: {{ $ns }}
+                {{- /* TODO: delete daily schedule */ -}}
             {{ else }}
 
+              {{- $daily_cron_schedule := "10 1 * * *" }}
               {{- $cron_schedule := "10 */1 * * *" }}
               {{- $ttl_schedule := "24h0m0s" }}
               {{- $acm_schedule_owner := "" }}
@@ -373,6 +378,7 @@ spec:
 
               {{ if $generateSchedule }}
 
+                {{- /* create vm backup schedule - DISABLING for now to test daily schedule */ -}}
                 {{- /* vms_ns gives the list of all namespaces where VM exist  */ -}}
                 {{ $vms_ns := " " }}
                 {{- /* vms_ns gives the list of all VM names  */ -}}
@@ -390,7 +396,9 @@ spec:
                   {{- end }}
                 {{- end }}
 
-              {{ if and (not (eq $vms_ns " ")) (not (eq $vms_names " ")) }}
+                {{- /* Disabling the custom schedule temporarily */ -}}
+                {{ $tempdisabled := "yes" }}
+                {{ if and (eq $tempdisabled "no") (not (eq $vms_ns " ")) (not (eq $vms_names " ")) }}
 
                 - complianceType: mustonlyhave
                   objectDefinition:
@@ -443,6 +451,64 @@ spec:
                 {{- /* there are VM resources */ -}}
                 {{- end }}
 
+                {{- /* create daily vm backup schedule */ -}}
+                {{- /* vms_daily_names gives the list of all VM names to be backed up with daily schedule */ -}}
+                {{ $vms_daily_names := " " }}
+
+                {{- range $vm_daily := $vms_daily }}
+                  {{ if not (contains $vm_daily.metadata.name $vms_daily_names) }}
+                    {{- /* add VM name if not already in the vms_daily_names  */ -}}
+                    {{- $vms_daily_names = (cat $vms_daily_names $vm_daily.metadata.name " ") }}
+                  {{- end }}
+                {{- end }}
+
+                {{ if not (eq $vms_daily_names " ") }}
+
+                - complianceType: mustonlyhave
+                  objectDefinition:
+                    apiVersion: velero.io/v1
+                    kind: Schedule
+                    metadata:
+                      name: {{ $acm_virt_sch_name_daily }}
+                      namespace: {{ $ns }}
+                      labels:
+                        {{ if not (eq $acm_schedule_owner "") }}
+                        cluster.open-cluster-management.io/backup-schedule-name: {{ $acm_schedule_owner }}
+                        {{- end }}
+                        cluster.open-cluster-management.io/backup-cluster: {{ fromClusterClaim "id.openshift.io" }}
+                        cluster.open-cluster-management.io/backup-schedule-type: kubevirt
+                    spec:
+                      paused: {{ $paused_schedule }}
+                      schedule: {{ $daily_cron_schedule }}
+                      skipImmediately: false
+                      template:
+                        ttl: {{ $ttl_schedule }}
+                        includeClusterResources: true
+                        snapshotMoveData: true
+                        defaultVolumesToFsBackup: false
+                        orLabelSelectors:
+                          - matchExpressions:
+                              - values:
+                                {{- range $vms_daily_name := split " " $vms_daily_names }}
+                                  {{ if not (eq $vms_daily_name "") }}
+                                - {{ $vms_daily_name }}
+                                  {{- end }}
+                                {{- end }}
+                                key: app
+                                operator: In
+                          - matchExpressions:
+                              - values:
+                                {{- range $vms_daily_name := split " " $vms_daily_names }}
+                                  {{ if not (eq $vms_daily_name "") }}
+                                - {{ $vms_daily_name }}
+                                  {{- end }}
+                                {{- end }}
+                                key: kubevirt.io/domain
+                                operator: In
+
+                {{- /* there are VM resources to backup with the daily schedule */ -}}
+                {{- end }}
+
               {{- /* generateSchedule is true */ -}}
               {{- end}}
 
@@ -450,7 +516,6 @@ spec:
             {{- end}}
           pruneObjectBehavior: DeleteIfCreated
           remediationAction: enforce
-          pruneObjectBehavior: DeleteIfCreated
           severity: high
 ---
 apiVersion: cluster.open-cluster-management.io/v1beta1
@@ -463,7 +528,7 @@ spec:
         labelSelector:
           matchExpressions:
             - key: 'acm-virt-config'
-              operator: 'Exists'        
+              operator: 'Exists'
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
